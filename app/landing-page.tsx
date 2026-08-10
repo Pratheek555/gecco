@@ -134,14 +134,14 @@ export default function LandingPage() {
           <div className={styles.navActions}>
             <LandingThemeToggle />
             <Link href="/dashboard" className={styles.dashboardButton}>Open dashboard</Link>
-            <a href="mailto:hello@gecco.in?subject=Start%20a%20project" className={styles.demoButton}>Start a project</a>
+            <a href="mailto:support@gecco.in?subject=Start%20a%20project" className={styles.demoButton}>Start a project</a>
           </div>
           <details className={styles.mobileNavigation}>
             <summary className={styles.menuButton} aria-label="Toggle navigation"><Menu /></summary>
             <div className={styles.mobileMenu}>
               <LandingThemeToggle mobile />
               {navItems.map(([label, href]) => <a key={label} href={href}>{label}</a>)}
-              <a href="mailto:hello@gecco.in?subject=Start%20a%20project">Start a project</a>
+              <a href="mailto:support@gecco.in?subject=Start%20a%20project">Start a project</a>
               <Link href="/dashboard">Open dashboard</Link>
             </div>
           </details>
@@ -159,7 +159,7 @@ export default function LandingPage() {
               <h1>Design, automate, and grow<br /><em>all in one place</em></h1>
               <p>Websites, SEO, smart automations and one dashboard—built to work together.</p>
               <div>
-                <a href="mailto:hello@gecco.in?subject=Free%20growth%20strategy%20call">Book a free strategy call <ArrowRight /></a>
+                <a href="mailto:support@gecco.in?subject=Free%20growth%20strategy%20call">Book a free strategy call <ArrowRight /></a>
                 <a href="#features"><Play /> Explore services</a>
               </div>
             </div>
@@ -264,7 +264,7 @@ export default function LandingPage() {
               <span>Built for growth</span>
               <h2>One partner from first click<br />to long-term member.</h2>
               <p>Stop stitching together agencies and disconnected tools. We design the journey and connect the systems behind it.</p>
-              <a href="mailto:hello@gecco.in?subject=Plan%20my%20growth%20system">Plan your growth system <ArrowRight /></a>
+              <a href="mailto:support@gecco.in?subject=Plan%20my%20growth%20system">Plan your growth system <ArrowRight /></a>
             </div>
             <div className={styles.resultGrid}>
               <article><strong>1 team</strong><span>from brand strategy to backend systems</span></article>
@@ -292,7 +292,7 @@ export default function LandingPage() {
                   <span><small>12 months</small><strong>₹18,999</strong></span>
                 </div>
                 <small className={styles.commitment}>Minimum 3-month commitment</small>
-                <a href="mailto:hello@gecco.in?subject=Gecco%20Starter%20plan">Choose Starter <ArrowRight /></a>
+                <a href="mailto:support@gecco.in?subject=Gecco%20Starter%20plan">Choose Starter <ArrowRight /></a>
               </article>
 
               <article className={`${styles.priceCard} ${styles.priceFeatured}`}>
@@ -306,7 +306,7 @@ export default function LandingPage() {
                   <span><small>12 months</small><strong>₹34,999</strong></span>
                 </div>
                 <small className={styles.commitment}>Minimum 3-month commitment</small>
-                <a href="mailto:hello@gecco.in?subject=Gecco%20Plus%20plan">Choose Plus <ArrowRight /></a>
+                <a href="mailto:support@gecco.in?subject=Gecco%20Plus%20plan">Choose Plus <ArrowRight /></a>
               </article>
 
               <article className={styles.priceCard}>
@@ -319,7 +319,7 @@ export default function LandingPage() {
                   <span><small>12 months</small><strong>₹49,999</strong></span>
                 </div>
                 <small className={styles.commitment}>Minimum 3-month commitment</small>
-                <a href="mailto:hello@gecco.in?subject=Gecco%20Pro%20plan">Choose Pro <ArrowRight /></a>
+                <a href="mailto:support@gecco.in?subject=Gecco%20Pro%20plan">Choose Pro <ArrowRight /></a>
               </article>
             </div>
           </section>
@@ -329,7 +329,7 @@ export default function LandingPage() {
             <span>Build your growth system</span>
             <h2>Make your website and operations<br />work as one.</h2>
             <p>Tell us where you want to grow. We&apos;ll map the website, SEO and automation plan to get you there.</p>
-            <a href="mailto:hello@gecco.in?subject=Free%20growth%20strategy%20call">Book your free strategy call <ArrowRight /></a>
+            <a href="mailto:support@gecco.in?subject=Free%20growth%20strategy%20call">Book your free strategy call <ArrowRight /></a>
           </section>
         </main>
 
@@ -341,13 +341,13 @@ export default function LandingPage() {
                 <span aria-label="LinkedIn">in</span>
                 <span aria-label="X">X</span>
               </div>
-              <a href="mailto:hello@gecco.in">hello@gecco.in</a>
+              <a href="mailto:support@gecco.in">hello@gecco.in</a>
               <p>Built in India.<br />Working with ambitious fitness brands everywhere.</p>
             </div>
 
             <div className={styles.footerStage}>
               <div className={styles.footerDots} aria-hidden="true" />
-              <a href="mailto:hello@gecco.in?subject=Start%20a%20project">
+              <a href="mailto:support@gecco.in?subject=Start%20a%20project">
                 Start a project <small>FREE CALL</small><ArrowRight />
               </a>
             </div>
