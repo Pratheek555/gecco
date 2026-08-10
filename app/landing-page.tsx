@@ -133,7 +133,7 @@ export default function LandingPage() {
           </nav>
           <div className={styles.navActions}>
             <LandingThemeToggle />
-            <Link href="/dashboard" className={styles.signIn}>Sign in</Link>
+            <Link href="/dashboard" className={styles.dashboardButton}>Open dashboard</Link>
             <a href="mailto:hello@gecco.in?subject=Start%20a%20project" className={styles.demoButton}>Start a project</a>
           </div>
           <details className={styles.mobileNavigation}>
@@ -141,8 +141,8 @@ export default function LandingPage() {
             <div className={styles.mobileMenu}>
               <LandingThemeToggle mobile />
               {navItems.map(([label, href]) => <a key={label} href={href}>{label}</a>)}
-              <Link href="/dashboard">Sign in</Link>
               <a href="mailto:hello@gecco.in?subject=Start%20a%20project">Start a project</a>
+              <Link href="/dashboard">Open dashboard</Link>
             </div>
           </details>
         </header>
@@ -274,7 +274,57 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section className={styles.cta} id="pricing">
+          <section className={styles.pricingSection} id="pricing">
+            <div className={styles.sectionHeading}>
+              <span>Simple, transparent pricing</span>
+              <h2>Choose the support your<br />next stage needs.</h2>
+              <p>Every plan starts with a three-month commitment so we have enough time to build, improve and create measurable momentum.</p>
+            </div>
+
+            <div className={styles.pricingGrid}>
+              <article className={styles.priceCard}>
+                <header><span>Starter</span><small>For a strong foundation</small></header>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>1,899</strong><span>/ month</span></div>
+                <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO</strong></span></div>
+                <div className={styles.termPrices}>
+                  <span><small>3 months</small><strong>₹5,697</strong></span>
+                  <span><small>6 months</small><strong>₹9,999</strong></span>
+                  <span><small>12 months</small><strong>₹18,999</strong></span>
+                </div>
+                <small className={styles.commitment}>Minimum 3-month commitment</small>
+                <a href="mailto:hello@gecco.in?subject=Gecco%20Starter%20plan">Choose Starter <ArrowRight /></a>
+              </article>
+
+              <article className={`${styles.priceCard} ${styles.priceFeatured}`}>
+                <div className={styles.popularTag}>Most popular</div>
+                <header><span>Plus</span><small>For connected growth</small></header>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>3,299</strong><span>/ month</span></div>
+                <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO + Dashboard</strong></span></div>
+                <div className={styles.termPrices}>
+                  <span><small>3 months</small><strong>₹8,999</strong></span>
+                  <span><small>6 months</small><strong>₹18,999</strong></span>
+                  <span><small>12 months</small><strong>₹34,999</strong></span>
+                </div>
+                <small className={styles.commitment}>Minimum 3-month commitment</small>
+                <a href="mailto:hello@gecco.in?subject=Gecco%20Plus%20plan">Choose Plus <ArrowRight /></a>
+              </article>
+
+              <article className={styles.priceCard}>
+                <header><span>Pro</span><small>For ambitious teams</small></header>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>4,499</strong><span>/ month</span></div>
+                <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO + Dashboard + automation</strong></span></div>
+                <div className={styles.termPrices}>
+                  <span><small>3 months</small><strong>₹12,499</strong></span>
+                  <span><small>6 months</small><strong>₹25,499</strong></span>
+                  <span><small>12 months</small><strong>₹49,999</strong></span>
+                </div>
+                <small className={styles.commitment}>Minimum 3-month commitment</small>
+                <a href="mailto:hello@gecco.in?subject=Gecco%20Pro%20plan">Choose Pro <ArrowRight /></a>
+              </article>
+            </div>
+          </section>
+
+          <section className={styles.cta} id="contact">
             <div className={styles.ctaMark} aria-hidden="true"><Sparkles /></div>
             <span>Build your growth system</span>
             <h2>Make your website and operations<br />work as one.</h2>

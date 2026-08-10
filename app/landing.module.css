@@ -23,8 +23,8 @@
 .navbar { position: absolute; z-index: 30; top: 0; left: 16px; right: 16px; height: 76px; display: flex; align-items: center; padding: 0 22px; background: transparent; }
 .navbar > a { display: flex; }
 .navbar nav { position: absolute; left: 50%; display: flex; gap: 37px; transform: translateX(-50%); }
-.navbar nav a,.signIn { color: #40444a; font-size: 12px; transition: color .2s; }
-.navbar nav a:hover,.signIn:hover { color: var(--blue); }
+.navbar nav a { color: #40444a; font-size: 12px; transition: color .2s; }
+.navbar nav a:hover { color: var(--blue); }
 .navActions { margin-left: auto; display: flex; align-items: center; gap: 24px; }
 .themeToggle { position: relative; width: 39px; height: 39px; flex: 0 0 auto; display: grid; place-items: center; padding: 0; color: #555c64; border: 1px solid #d8dbde; border-radius: 11px; background: transparent; transition: color .2s, border-color .2s, background-color .2s, transform .2s; }
 .themeToggle:hover { color: var(--blue); border-color: #9da3aa; transform: translateY(-1px); }
@@ -33,6 +33,8 @@
 :global(:root[data-theme="dark"]) .themeMoon { display: none; }
 :global(:root[data-theme="dark"]) .themeSun { display: block; }
 .mobileThemeToggle { display: none; }
+.dashboardButton { height: 39px; display: inline-flex; align-items: center; justify-content: center; padding: 0 17px; color: white; border: 1px solid var(--blue); border-radius: 11px; background: var(--blue); box-shadow: 0 8px 20px rgba(22,134,248,.2); font-size: 12px; font-weight: 620; transition: transform .2s, box-shadow .2s, background-color .2s; }
+.dashboardButton:hover { background: var(--blue-dark); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(22,134,248,.28); }
 .demoButton { height: 39px; display: inline-flex; align-items: center; justify-content: center; padding: 0 19px; border: 1px solid #cfd3d7; border-radius: 11px; font-size: 12px; font-weight: 600; transition: border-color .2s, transform .2s, box-shadow .2s; }
 .demoButton:hover { border-color: #9da3aa; transform: translateY(-1px); box-shadow: 0 7px 18px rgba(26, 29, 33, .08); }
 .mobileNavigation { display: none; margin-left: auto; }
@@ -265,6 +267,34 @@
 .resultGrid article { min-height: 170px; display: flex; flex-direction: column; justify-content: center; padding: 28px; background: #fbfbfa; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }.resultGrid article:nth-child(2n) { border-right: 0; }.resultGrid article:nth-child(n+3) { border-bottom: 0; }
 .resultGrid strong { font-size: 42px; letter-spacing: -.05em; font-weight: 530; }.resultGrid span { margin-top: 9px; color: #7d8288; font-size: 10px; }
 
+.pricingSection { padding: 120px clamp(32px,7vw,104px) 125px; background: #f5f6f6; }
+.pricingSection .sectionHeading { max-width: 710px; margin-bottom: 78px; }
+.pricingSection .sectionHeading p { max-width: 610px; }
+.pricingGrid { max-width: 1160px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 17px; margin: 0 auto; align-items: stretch; }
+.priceCard { position: relative; min-width: 0; min-height: 520px; display: flex; flex-direction: column; padding: 29px; overflow: hidden; border: 1px solid #dfe3e6; border-radius: 22px; background: rgba(255,255,255,.86); box-shadow: 0 22px 55px rgba(28,37,45,.065); }
+.priceCard::before { content: ""; position: absolute; top: -85px; right: -65px; width: 190px; height: 190px; border-radius: 50%; background: rgba(22,134,248,.06); filter: blur(3px); }
+.priceCard header { position: relative; z-index: 1; display: flex; align-items: center; }
+.priceCard header > span { font-size: 20px; font-weight: 650; letter-spacing: -.04em; }
+.priceCard header > small { margin-left: auto; color: #899097; font-size: 7px; text-transform: uppercase; letter-spacing: .07em; }
+.monthlyPrice { display: flex; align-items: flex-start; margin-top: 37px; }
+.monthlyPrice sup { margin: 8px 3px 0 0; font-size: 16px; font-weight: 600; }.monthlyPrice strong { font-size: clamp(44px,4vw,58px); line-height: 1; letter-spacing: -.065em; font-weight: 590; }.monthlyPrice > span { align-self: flex-end; margin: 0 0 7px 7px; color: #858c93; font-size: 9px; }
+.planIncludes { min-height: 64px; display: flex; align-items: center; gap: 12px; margin: 20px 0 24px; padding: 11px 13px; color: #176fbd; border: 1px solid #bbddff; border-radius: 11px; background: linear-gradient(135deg,#edf7ff,#dceeff); box-shadow: 0 9px 22px rgba(22,134,248,.09); }
+.planIncludes > i { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; color: white; border-radius: 9px; background: #1686f8; box-shadow: 0 7px 15px rgba(22,134,248,.22); font-style: normal; }.planIncludes > i svg { width: 15px; }
+.planIncludes > span { min-width: 0; display: grid; gap: 4px; }.planIncludes small { color: #6c93b7; font-size: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }.planIncludes strong { font-size: 11px; line-height: 1.2; font-weight: 700; }
+.termPrices { display: grid; border-top: 1px solid #e5e8ea; }
+.termPrices > span { min-height: 52px; display: flex; align-items: center; border-bottom: 1px solid #e5e8ea; }
+.termPrices small { color: #7c8389; font-size: 9px; }.termPrices strong { margin-left: auto; font-size: 12px; font-weight: 620; }
+.commitment { margin: 17px 0 19px; color: #8a9096; font-size: 7px; }
+.priceCard > a { height: 43px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto; color: white; border-radius: 9px; background: #141a21; font-size: 10px; font-weight: 650; transition: transform .2s,box-shadow .2s; }
+.priceCard > a:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(20,26,33,.16); }.priceCard > a svg { width: 13px; }
+.priceFeatured { color: white; border-color: #1686f8; background-color: #1686f8; background-image: radial-gradient(circle at 85% 4%,rgba(255,255,255,.2),transparent 33%),linear-gradient(145deg,#2795ff,#0875e4); box-shadow: 0 30px 65px rgba(22,134,248,.23); transform: translateY(-14px); }
+.priceFeatured::before { background: rgba(255,255,255,.13); }
+.popularTag { position: absolute; top: 0; right: 25px; padding: 7px 11px; color: #0872da; border-radius: 0 0 8px 8px; background: white; font-size: 7px; font-weight: 750; text-transform: uppercase; letter-spacing: .09em; }
+.priceFeatured header > small,.priceFeatured .monthlyPrice > span,.priceFeatured .termPrices small,.priceFeatured .commitment { color: rgba(255,255,255,.7); }
+.priceFeatured .planIncludes { color: white; border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.16); box-shadow: 0 9px 22px rgba(0,70,145,.12); }.priceFeatured .planIncludes > i { color: #1686f8; background: white; box-shadow: 0 7px 15px rgba(0,70,145,.16); }.priceFeatured .planIncludes small { color: rgba(255,255,255,.72); }
+.priceFeatured .termPrices,.priceFeatured .termPrices > span { border-color: rgba(255,255,255,.19); }
+.priceFeatured > a { color: #0875df; background: white; }.priceFeatured > a:hover { box-shadow: 0 12px 25px rgba(0,70,145,.22); }
+
 .cta { position: relative; min-height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 16px 16px; overflow: hidden; color: white; border-radius: 24px; background-color: #1686f8; background-image: radial-gradient(rgba(255,255,255,.22) 1px, transparent 1px), radial-gradient(circle at 50% 50%, rgba(255,255,255,.14), transparent 43%); background-size: 10px 10px, 100% 100%; text-align: center; }
 .cta::before,.cta::after { content: ""; position: absolute; width: 240px; height: 240px; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; }.cta::before { left: -110px; top: -90px; }.cta::after { right: -100px; bottom: -110px; }
 .cta > span { color: white; background: rgba(255,255,255,.16); }
@@ -309,8 +339,7 @@
 }
 :global(:root[data-theme="dark"]) .siteFrame { background: #0c0f13; }
 :global(:root[data-theme="dark"]) .navbar { background: transparent; }
-:global(:root[data-theme="dark"]) .navbar nav a,
-:global(:root[data-theme="dark"]) .signIn { color: #b4bac2; }
+:global(:root[data-theme="dark"]) .navbar nav a { color: #b4bac2; }
 :global(:root[data-theme="dark"]) .themeToggle,
 :global(:root[data-theme="dark"]) .demoButton,
 :global(:root[data-theme="dark"]) .menuButton { color: #d8dde3; border-color: #343b43; background: #151a20; }
@@ -414,6 +443,23 @@
 :global(:root[data-theme="dark"]) .results > div:first-child > span { color: #f0cc71; background: #332b17; }
 :global(:root[data-theme="dark"]) .resultGrid article { background: #12171c; }
 :global(:root[data-theme="dark"]) .resultGrid span { color: #a2a9b2; }
+:global(:root[data-theme="dark"]) .pricingSection { background: #0f1318; }
+:global(:root[data-theme="dark"]) .priceCard { border-color: #303740; background: #151b21; box-shadow: 0 22px 55px rgba(0,0,0,.16); }
+:global(:root[data-theme="dark"]) .priceCard header > small,
+:global(:root[data-theme="dark"]) .monthlyPrice > span,
+:global(:root[data-theme="dark"]) .termPrices small,
+:global(:root[data-theme="dark"]) .commitment { color: #9ba3ab; }
+:global(:root[data-theme="dark"]) .planIncludes { color: #9dd0ff; border-color: #315575; background: linear-gradient(135deg,#172c3f,#1a354d); }
+:global(:root[data-theme="dark"]) .termPrices,
+:global(:root[data-theme="dark"]) .termPrices > span { border-color: #303740; }
+:global(:root[data-theme="dark"]) .priceFeatured { border-color: #1686f8; background-color: #1686f8; background-image: radial-gradient(circle at 85% 4%,rgba(255,255,255,.2),transparent 33%),linear-gradient(145deg,#2795ff,#0875e4); box-shadow: 0 30px 65px rgba(22,134,248,.23); }
+:global(:root[data-theme="dark"]) .priceFeatured header > small,
+:global(:root[data-theme="dark"]) .priceFeatured .monthlyPrice > span,
+:global(:root[data-theme="dark"]) .priceFeatured .termPrices small,
+:global(:root[data-theme="dark"]) .priceFeatured .commitment { color: rgba(255,255,255,.7); }
+:global(:root[data-theme="dark"]) .priceFeatured .planIncludes { color: white; border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.16); }
+:global(:root[data-theme="dark"]) .priceFeatured .termPrices,
+:global(:root[data-theme="dark"]) .priceFeatured .termPrices > span { border-color: rgba(255,255,255,.19); }
 :global(:root[data-theme="dark"]) .footer { color: #f3f7fc; border-color: #26394e; background-color: #101b29; background-image: linear-gradient(180deg,#0d1115 0%,#112238 46%,#2868aa 100%); }
 :global(:root[data-theme="dark"]) .footer::before { background-image: radial-gradient(circle at 50% 38%,rgba(63,134,210,.25),transparent 25%),linear-gradient(90deg,transparent,rgba(110,176,245,.06),transparent); }
 :global(:root[data-theme="dark"]) .footerContact > p,
@@ -423,6 +469,7 @@
 
 @media (max-width: 1050px) {
   .navbar nav { gap: 22px; }
+  .navActions { gap: 12px; }
   .noteGroup { left: 1%; transform: rotate(-3deg) scale(.84); }
   .reminderGroup { right: -2%; transform: rotate(5deg) scale(.84); }
   .tasksCard { left: 1%; transform: rotate(-2deg) scale(.86); transform-origin: bottom left; }
@@ -431,6 +478,7 @@
   .serviceNode { width: 170px; }
   .journeyCard { padding-left: 19px; padding-right: 19px; }
   .pipelineVisual { grid-template-columns: repeat(3,minmax(82px,1fr)); padding: 9px; gap: 5px; }
+  .priceCard { padding: 25px; }
   .productWindow { height: 565px; }.productWindow > aside { flex-basis: 170px; }.productWindow > main { padding: 22px; }.attendanceChart,.todayList { min-height: 280px; }
 }
 
@@ -465,6 +513,11 @@
   .featureCard { min-height: auto; }.featureWebsite .websiteVisual { min-height: 340px; margin-top: 28px; }.featureSeo .seoVisual,.featureAutomation .automationVisual { min-height: 220px; }.featureDashboard { display: flex; gap: 24px; }.featureDashboard .insightVisual { width: 100%; min-height: 280px; }
   .productWindow { height: 520px; }.productWindow > aside { display: none; }.productWindow > main { padding: 18px; }.previewStats { gap: 8px; }.previewStats article { padding: 12px; }.previewStats strong { font-size: 22px; }.attendanceChart,.todayList { min-height: 270px; padding: 14px; }
   .results { grid-template-columns: 1fr; gap: 45px; padding: 90px 30px; }
+  .pricingSection { padding: 90px 24px; }
+  .pricingSection .sectionHeading { margin-bottom: 55px; }
+  .pricingGrid { max-width: 560px; grid-template-columns: 1fr; gap: 16px; }
+  .priceCard { min-height: 500px; padding: 29px; }
+  .priceFeatured { transform: none; }
   .footer { min-height: 720px; margin: 0 10px 10px; padding: 78px 30px 0; border-radius: 19px; }
   .footerTop { grid-template-columns: 1fr 1fr; gap: 42px 30px; }
   .footerStage { grid-column: 1/-1; grid-row: 1; min-height: 155px; }
@@ -500,6 +553,10 @@
   .featureCard { padding: 22px 18px; border-radius: 19px; }.featureCopy h3,.featureDashboard .featureCopy h3 { font-size: 25px; }.featureWebsite .websiteVisual { min-height: 285px; }.featureDashboard .insightVisual { min-height: 255px; }
   .productWindow { height: auto; min-height: 590px; }.productWindow > main > header button { font-size: 0; width: 37px; padding: 0; justify-content: center; }.previewStats { grid-template-columns: 1fr 1fr; }.previewStats article:last-child { display: none; }.previewGrid { grid-template-columns: 1fr; }.todayList { display: none; }.attendanceChart { min-height: 305px; }
   .results { padding: 75px 18px; }.resultGrid article { min-height: 135px; padding: 18px; }.resultGrid strong { font-size: 33px; }.resultGrid span { font-size: 8px; }
+  .pricingSection { padding: 75px 16px; }
+  .pricingSection .sectionHeading { margin-bottom: 42px; }
+  .priceCard { min-height: 480px; padding: 24px 20px; border-radius: 19px; }
+  .monthlyPrice strong { font-size: 49px; }
   .cta { min-height: 470px; margin: 0 10px 10px; padding: 40px 20px; border-radius: 19px; }.cta p { max-width: 290px; line-height: 1.6; }
   .footer { min-height: 820px; padding: 58px 20px 0; }
   .footerTop { grid-template-columns: 1fr; gap: 42px; text-align: center; }
