@@ -43,3 +43,7 @@ next-env.d.ts
 
 # local logs
 *.log
+
+#My files
+What_I_know.md
+DATABASE_DESIGN.md
