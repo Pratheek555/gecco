@@ -4,13 +4,13 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity, ArrowUpRight, Bell, CalendarDays, Check, ChevronDown,
-  ChevronLeft, ChevronRight, CircleHelp, CreditCard, Download, Dumbbell,
+  ChevronLeft, ChevronRight, CreditCard, Download,
   Filter, HelpCircle, LayoutDashboard, Mail, Menu, MessageCircle, Moon,
-  MoreHorizontal, Phone, Plus, Search, Settings, ShieldCheck, Sparkles,
-  Sun, TrendingUp, Upload, UserCheck, UserPlus, UserRoundX, Users,
-  WalletCards, X, Zap,
+  MoreHorizontal, Phone, Plus, Search, ShieldCheck, Sparkles,
+  Sun, Upload, UserCheck, UserPlus, UserRoundX, Users, X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import DashboardSidebar, { Brand } from "../dashboard-sidebar";
 
 type Status = "Active" | "Expiring" | "Paused" | "Inactive";
 type StatusFilter = "All" | Status;
@@ -43,43 +43,6 @@ const seedMembers: Member[] = [
   { id: 9, name: "Arjun Nair", initials: "AN", phone: "+91 96547 10283", email: "arjun.nair@example.com", plan: "Monthly Flex", status: "Active", visits: 11, lastVisit: "5 Aug, 6:44 PM", renewal: "28 Aug 2026", amount: "\u20B92,499", joined: "28 May 2026", attendance: 69, color: "cyan" },
   { id: 10, name: "Diya Patel", initials: "DP", phone: "+91 99992 76104", email: "diya.patel@example.com", plan: "Strength Pro", status: "Active", visits: 14, lastVisit: "Today, 8:16 AM", renewal: "02 Sep 2026", amount: "\u20B93,499", joined: "02 Apr 2025", attendance: 73, color: "indigo" },
 ];
-
-type NavItem = { label: string; icon: LucideIcon; href?: string; active?: boolean; badge?: string };
-const navGroups: { label: string; items: NavItem[] }[] = [
-  { label: "Workspace", items: [
-    { label: "Overview", icon: LayoutDashboard, href: "/" },
-    { label: "Members", icon: Users, href: "/members", active: true },
-    { label: "Attendance", icon: Activity, href: "/attendance" },
-    { label: "Payments", icon: WalletCards, href: "/payments" },
-    { label: "Messages", icon: MessageCircle, href: "/messages", badge: "8" },
-  ] },
-  { label: "Manage", items: [
-    { label: "Memberships", icon: CreditCard, href: "/memberships" }, { label: "Trainers", icon: Dumbbell, href: "/trainers" },
-    { label: "Reports", icon: TrendingUp, href: "/reports" }, { label: "Automations", icon: Zap, href: "/automations", badge: "NEW" },
-  ] },
-];
-
-function Brand() {
-  return <div className="brand"><div className="brand-mark"><TrendingUp size={18} strokeWidth={2.8} /></div><span>Gymwise</span></div>;
-}
-
-function Sidebar({ open, close, notify }: { open: boolean; close: () => void; notify: (message: string) => void }) {
-  return <>
-    {open && <button className="sidebar-scrim" aria-label="Close navigation" onClick={close} />}
-    <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
-      <div className="sidebar-top"><Brand /><button className="icon-button sidebar-close" onClick={close} aria-label="Close navigation"><X size={18} /></button></div>
-      <button className="location-switcher" onClick={() => notify("Location switcher opened")}><div className="location-icon"><Dumbbell size={17} /></div><div><strong>Pulse Fitness</strong><span>South Delhi</span></div><ChevronDown size={15} /></button>
-      <nav className="main-nav" aria-label="Primary navigation">
-        {navGroups.map((group) => <div className="nav-group" key={group.label}><div className="nav-label">{group.label}</div>{group.items.map((item) => {
-          const Icon = item.icon;
-          const content = <><Icon size={18} strokeWidth={item.active ? 2.2 : 1.8} /><span>{item.label}</span>{item.badge && <span className={`nav-badge ${item.badge === "NEW" ? "new" : ""}`}>{item.badge}</span>}</>;
-          return item.href ? <Link key={item.label} href={item.href} onClick={close} className={`nav-item ${item.active ? "active" : ""}`}>{content}</Link> : <button key={item.label} className="nav-item" onClick={() => notify(`${item.label} opened`)}>{content}</button>;
-        })}</div>)}
-      </nav>
-      <div className="sidebar-bottom"><div className="insight-card"><div className="insight-icon"><Sparkles size={16} /></div><strong>Member insight</strong><p>32 renewals are due in the next 14 days.</p><button onClick={() => notify("Renewal cohort selected")}>View members <ArrowUpRight size={14} /></button></div><button className="nav-item" onClick={() => notify("Settings opened")}><Settings size={18} /><span>Settings</span></button><button className="nav-item" onClick={() => notify("Help centre opened")}><CircleHelp size={18} /><span>Help & support</span></button></div>
-    </aside>
-  </>;
-}
 
 function ThemeToggle() {
   function toggleTheme() {
@@ -152,7 +115,7 @@ export default function MembersPage() {
     setMembers((current) => [member, ...current]); setModalOpen(false); setStatus("All"); setQuery(""); notify(`${member.name} was added successfully`);
   }
 
-  return <div className="app-shell"><Sidebar open={mobileNav} close={() => setMobileNav(false)} notify={notify} /><div className="app-content"><Header onMenu={() => setMobileNav(true)} focusSearch={() => document.getElementById("member-search")?.focus()} notify={notify} /><main className="dashboard members-dashboard"><div className="page-heading members-heading"><div><p className="members-breadcrumb">Workspace <ChevronRight size={12} /> Members</p><h1>Members</h1><p>Manage your community, memberships, and renewals.</p></div><div className="heading-actions"><button className="button secondary import-button" onClick={() => notify("Import template is ready")}><Upload size={16} /> Import</button><button className="button secondary" onClick={exportMembers}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModalOpen(true)}><Plus size={17} /> Add member</button></div></div>
+  return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} /><div className="app-content"><Header onMenu={() => setMobileNav(true)} focusSearch={() => document.getElementById("member-search")?.focus()} notify={notify} /><main className="dashboard members-dashboard"><div className="page-heading members-heading"><div><p className="members-breadcrumb">Workspace <ChevronRight size={12} /> Members</p><h1>Members</h1><p>Manage your community, memberships, and renewals.</p></div><div className="heading-actions"><button className="button secondary import-button" onClick={() => notify("Import template is ready")}><Upload size={16} /> Import</button><button className="button secondary" onClick={exportMembers}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModalOpen(true)}><Plus size={17} /> Add member</button></div></div>
 
     <section className="member-stats" aria-label="Member statistics"><StatCard icon={Users} tone="purple" label="Total members" value="1,284" change="4.8%" note="58 joined this month" /><StatCard icon={UserCheck} tone="green" label="Active members" value="1,176" change="3.2%" note="91.6% of total members" /><StatCard icon={CalendarDays} tone="amber" label="Expiring soon" value="32" change="6.7%" note="Within the next 14 days" /><StatCard icon={UserRoundX} tone="rose" label="Needs attention" value="18" change="2.1%" note="Inactive for 21+ days" /></section>
 
