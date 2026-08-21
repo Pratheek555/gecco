@@ -11,7 +11,9 @@
     "dev:website": "turbo dev --filter=@gecco/website",
     "dev:dashboard": "turbo dev --filter=@gecco/dashboard",
     "build": "turbo build",
-    "lint": "turbo lint"
+    "lint": "turbo lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "packageManager": "bun@1.3.14",
   "ignoreScripts": [
@@ -23,6 +25,7 @@
     "unrs-resolver"
   ],
   "devDependencies": {
+    "prettier": "^3.6.2",
     "turbo": "^2.10.10"
   }
 }
