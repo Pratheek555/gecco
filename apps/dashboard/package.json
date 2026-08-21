@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3001",
-    "build": "bunx prisma generate --config ../../packages/db/prisma.config.ts && next build",
+    "build": "next build",
     "start": "next start --port 3001",
     "lint": "eslint"
   },
