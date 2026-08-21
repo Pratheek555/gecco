@@ -11,6 +11,7 @@ import {
   UserRoundCheck, Users, WalletCards, X, Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import DashboardSidebar from "./dashboard-sidebar";
 
 type VisitStatus = "In gym" | "Checked out";
 type VisitFilter = "All visits" | VisitStatus;
@@ -52,7 +53,7 @@ function Brand() {
   return <div className="brand"><div className="brand-mark"><TrendingUp size={18} strokeWidth={2.8} /></div><span>Gymwise</span></div>;
 }
 
-function Sidebar({ open, close }: { open: boolean; close: () => void }) {
+function LegacySidebar({ open, close }: { open: boolean; close: () => void }) {
   return <>
     {open && <button className="sidebar-scrim" aria-label="Close navigation" onClick={close} />}
     <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
@@ -108,7 +109,7 @@ export default function AttendancePage() {
   function exportVisits() { const rows = visits.map((visit) => [visit.name, visit.plan, visit.checkIn, visit.checkOut, visit.duration, visit.status, visit.source].join(",")); const csv = ["Member,Plan,Check in,Check out,Duration,Status,Source", ...rows].join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const link = document.createElement("a"); link.href = url; link.download = "pulse-fitness-attendance.csv"; link.click(); URL.revokeObjectURL(url); notify("Attendance report exported"); }
 
   return <div className="app-shell attendance-app">
-    <Sidebar open={mobileNav} close={() => setMobileNav(false)} />
+    <DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} />
     <div className="app-content"><Header onMenu={() => setMobileNav(true)} /><main className="dashboard attendance-dashboard">
       <div className="attendance-heading"><div><div className="heading-breadcrumb"><span>Workspace</span><ChevronRight size={13} /><strong>Attendance</strong></div><h1>Attendance</h1><p>Track member visits and manage today’s check-ins.</p></div><div className="heading-actions"><div className="date-stepper"><button aria-label="Previous day"><ChevronLeft size={16} /></button><div><CalendarDays size={15} /><span>Today, 8 Aug</span></div><button aria-label="Next day" disabled><ChevronRight size={16} /></button></div><button className="button secondary export-button" onClick={exportVisits}><Download size={16} /> Export</button><button className="button primary" onClick={() => setShowModal(true)}><Plus size={17} /> Check in member</button></div></div>
       <section className="attendance-stats" aria-label="Today’s attendance overview"><StatCard icon={UserRoundCheck} label="In gym now" value={`${84 + insideDelta}`} detail="12% above usual" trend="up" tone="green" /><StatCard icon={LogIn} label="Today's visits" value={`${386 + visits.length - initialVisits.length}`} detail="42 more than last Sat" trend="up" /><StatCard icon={Clock3} label="Peak hour" value="6–7 PM" detail="72 member check-ins" tone="amber" /><StatCard icon={Timer} label="Avg. visit" value="74 min" detail="4 min shorter this week" trend="down" tone="blue" /></section>

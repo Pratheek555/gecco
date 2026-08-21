@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
+import DashboardSidebar from "../dashboard-sidebar";
 
 type View = "Inbox" | "Campaigns" | "Templates";
 type InboxFilter = "All" | "Unread";
@@ -77,7 +78,7 @@ function Brand() {
   return <div className="brand"><div className="brand-mark"><TrendingUp size={18} strokeWidth={2.8} /></div><span>Gymwise</span></div>;
 }
 
-function Sidebar({ open, close }: { open: boolean; close: () => void }) {
+function LegacySidebar({ open, close }: { open: boolean; close: () => void }) {
   return <>
     {open && <button className="sidebar-scrim" aria-label="Close navigation" onClick={close} />}
     <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
@@ -179,5 +180,5 @@ export default function MessagesPage() {
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [toast, setToast] = useState("");
   function showToast(message: string) { setToast(message); window.setTimeout(() => setToast(""), 2600); }
-  return <div className="app-shell"><Sidebar open={mobileNav} close={() => setMobileNav(false)} /><div className="app-content messages-app-content"><Header onMenu={() => setMobileNav(true)} /><main className="messages-page"><div className="messages-heading"><div><h1>Messages</h1><p>Connect with members and keep every conversation in one place.</p></div><button className="button primary" onClick={() => setShowNewMessage(true)}><Plus size={16} /> New message</button></div><div className="messages-tabs" role="tablist">{(["Inbox", "Campaigns", "Templates"] as View[]).map(item => <button role="tab" aria-selected={view === item} className={view === item ? "selected" : ""} key={item} onClick={() => setView(item)}>{item}{item === "Inbox" && <span>8</span>}</button>)}</div>{view === "Inbox" && <Inbox showToast={showToast} />}{view === "Campaigns" && <Campaigns showToast={showToast} />}{view === "Templates" && <Templates showToast={showToast} />}</main></div><nav className="mobile-tabs" aria-label="Mobile navigation"><Link href="/"><Home size={19} /><span>Home</span></Link><Link href="/members"><Users size={19} /><span>Members</span></Link><button className="mobile-add" onClick={() => setShowNewMessage(true)}><Plus size={21} /></button><button className="active"><MessageCircle size={19} /><span>Messages</span></button><button><Settings size={19} /><span>Settings</span></button></nav>{showNewMessage && <NewMessageModal close={() => setShowNewMessage(false)} showToast={showToast} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}</div>;
+  return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={showToast} /><div className="app-content messages-app-content"><Header onMenu={() => setMobileNav(true)} /><main className="messages-page"><div className="messages-heading"><div><h1>Messages</h1><p>Connect with members and keep every conversation in one place.</p></div><button className="button primary" onClick={() => setShowNewMessage(true)}><Plus size={16} /> New message</button></div><div className="messages-tabs" role="tablist">{(["Inbox", "Campaigns", "Templates"] as View[]).map(item => <button role="tab" aria-selected={view === item} className={view === item ? "selected" : ""} key={item} onClick={() => setView(item)}>{item}{item === "Inbox" && <span>8</span>}</button>)}</div>{view === "Inbox" && <Inbox showToast={showToast} />}{view === "Campaigns" && <Campaigns showToast={showToast} />}{view === "Templates" && <Templates showToast={showToast} />}</main></div><nav className="mobile-tabs" aria-label="Mobile navigation"><Link href="/"><Home size={19} /><span>Home</span></Link><Link href="/members"><Users size={19} /><span>Members</span></Link><button className="mobile-add" onClick={() => setShowNewMessage(true)}><Plus size={21} /></button><button className="active"><MessageCircle size={19} /><span>Messages</span></button><button><Settings size={19} /><span>Settings</span></button></nav>{showNewMessage && <NewMessageModal close={() => setShowNewMessage(false)} showToast={showToast} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}</div>;
 }
