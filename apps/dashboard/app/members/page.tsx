@@ -1,130 +1,302 @@
 "use client";
 
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import type { FormEvent } from "react";
 import {
-  Activity, ArrowUpRight, Bell, CalendarDays, Check, ChevronDown,
-  ChevronLeft, ChevronRight, CreditCard, Download,
-  Filter, HelpCircle, LayoutDashboard, Mail, Menu, MessageCircle, Moon,
-  MoreHorizontal, Phone, Plus, Search, ShieldCheck, Sparkles,
-  Sun, Upload, UserCheck, UserPlus, UserRoundX, Users, X,
+  Bell, CalendarDays, Check, ChevronDown, ChevronRight, Download, HelpCircle,
+  CreditCard, LayoutDashboard, Mail, Menu, MessageCircle, Moon, Phone, Plus, Search,
+  IndianRupee, MoreHorizontal, ShieldCheck, Sun, Upload, UserCheck, UserRoundX, Users, X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar, { Brand } from "../dashboard-sidebar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
-type Status = "Active" | "Expiring" | "Paused" | "Inactive";
-type StatusFilter = "All" | Status;
-type Member = {
-  id: number;
-  name: string;
-  initials: string;
-  phone: string;
-  email: string;
-  plan: string;
-  status: Status;
-  visits: number;
-  lastVisit: string;
-  renewal: string;
-  amount: string;
-  joined: string;
-  attendance: number;
-  color: string;
+type MembershipStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
+
+type Membership = {
+  id: string;
+  planTypeSnapshot: "GT" | "PT";
+  agreedFee: string;
+  startsOn: string;
+  endsOn: string;
+  status: MembershipStatus;
 };
 
-const seedMembers: Member[] = [
-  { id: 1, name: "Aarav Mehta", initials: "AM", phone: "+91 98765 42108", email: "aarav.m@example.com", plan: "Strength Pro", status: "Active", visits: 18, lastVisit: "Today, 7:42 AM", renewal: "18 Aug 2026", amount: "\u20B93,499", joined: "12 Jan 2024", attendance: 82, color: "violet" },
-  { id: 2, name: "Neha Sharma", initials: "NS", phone: "+91 98114 27506", email: "neha.sharma@example.com", plan: "Annual Unlimited", status: "Expiring", visits: 12, lastVisit: "Yesterday, 6:18 PM", renewal: "11 Aug 2026", amount: "\u20B918,000", joined: "11 Aug 2023", attendance: 64, color: "pink" },
-  { id: 3, name: "Rohan Kapoor", initials: "RK", phone: "+91 99583 61042", email: "rohan.k@example.com", plan: "Monthly Flex", status: "Active", visits: 9, lastVisit: "6 Aug, 8:05 AM", renewal: "24 Aug 2026", amount: "\u20B92,499", joined: "24 Mar 2025", attendance: 58, color: "blue" },
-  { id: 4, name: "Ishita Rao", initials: "IR", phone: "+91 98912 77431", email: "ishita.rao@example.com", plan: "Strength Pro", status: "Paused", visits: 4, lastVisit: "28 Jul, 7:14 PM", renewal: "Paused", amount: "\u20B93,499", joined: "04 Sep 2024", attendance: 28, color: "amber" },
-  { id: 5, name: "Kabir Singh", initials: "KS", phone: "+91 97117 40286", email: "kabir.s@example.com", plan: "Annual Unlimited", status: "Active", visits: 22, lastVisit: "Today, 6:32 AM", renewal: "08 Aug 2027", amount: "\u20B918,000", joined: "08 Aug 2026", attendance: 94, color: "green" },
-  { id: 6, name: "Ananya Verma", initials: "AV", phone: "+91 88604 91823", email: "ananya.v@example.com", plan: "Monthly Flex", status: "Expiring", visits: 7, lastVisit: "4 Aug, 5:51 PM", renewal: "13 Aug 2026", amount: "\u20B92,499", joined: "13 Feb 2025", attendance: 46, color: "purple" },
-  { id: 7, name: "Vihaan Malhotra", initials: "VM", phone: "+91 99105 38744", email: "vihaan.m@example.com", plan: "Strength Pro", status: "Inactive", visits: 0, lastVisit: "21 Jun, 8:20 AM", renewal: "Expired 22 Jul", amount: "\u20B93,499", joined: "22 Jul 2024", attendance: 8, color: "slate" },
-  { id: 8, name: "Meera Iyer", initials: "MI", phone: "+91 98102 65319", email: "meera.iyer@example.com", plan: "Annual Unlimited", status: "Active", visits: 16, lastVisit: "Yesterday, 7:08 AM", renewal: "17 Nov 2026", amount: "\u20B918,000", joined: "17 Nov 2024", attendance: 76, color: "rose" },
-  { id: 9, name: "Arjun Nair", initials: "AN", phone: "+91 96547 10283", email: "arjun.nair@example.com", plan: "Monthly Flex", status: "Active", visits: 11, lastVisit: "5 Aug, 6:44 PM", renewal: "28 Aug 2026", amount: "\u20B92,499", joined: "28 May 2026", attendance: 69, color: "cyan" },
-  { id: 10, name: "Diya Patel", initials: "DP", phone: "+91 99992 76104", email: "diya.patel@example.com", plan: "Strength Pro", status: "Active", visits: 14, lastVisit: "Today, 8:16 AM", renewal: "02 Sep 2026", amount: "\u20B93,499", joined: "02 Apr 2025", attendance: 73, color: "indigo" },
-];
+type Member = {
+  id: string;
+  fullName: string;
+  memberships: Membership[];
+  balance: {
+    totalOutstanding: string;
+    overdueAmount: string;
+    availableCredit: string;
+    oldestDueOn: string | null;
+    paymentState: "OPEN" | "OVERDUE" | "PAID" | "CREDIT";
+  };
+};
+
+type MembersResponse = {
+  members: Member[];
+  error?: string;
+};
+
+type SessionResponse = {
+  user: { fullName: string };
+  activeGym: { role: string };
+};
+
+type MemberDetailsResponse = {
+  member: {
+    contacts: { id: string; kind: "PHONE" | "EMAIL" | "WHATSAPP" | "OTHER"; value: string; isPrimary: boolean }[];
+    notes: { id: string; body: string; createdAt: string; createdBy: { fullName: string } | null }[];
+  };
+  payments: {
+    id: string;
+    amount: string;
+    paidOn: string;
+    status: "SUCCEEDED" | "VOIDED" | "REFUNDED";
+    reference: string | null;
+    paymentMode: { name: string };
+    recipient: { displayName: string };
+  }[];
+  error?: string;
+};
+
+const money = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 0,
+});
+
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
 
 function ThemeToggle() {
   function toggleTheme() {
     const dark = document.documentElement.dataset.theme !== "dark";
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    localStorage.setItem("gymwise-theme", dark ? "dark" : "light");
+    localStorage.setItem("gecco-theme", dark ? "dark" : "light");
   }
+
   return <button className="icon-button theme-button" onClick={toggleTheme} aria-label="Toggle color theme"><Sun className="theme-sun" size={18} /><Moon className="theme-moon" size={18} /></button>;
 }
 
-function Header({ onMenu, focusSearch, notify }: { onMenu: () => void; focusSearch: () => void; notify: (message: string) => void }) {
-  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div><button className="search-box" onClick={focusSearch}><Search size={16} /><span>Search members, payments...</span><kbd>Ctrl K</kbd></button></div><div className="topbar-actions"><button className="icon-button help-button" onClick={() => notify("Help centre opened")} aria-label="Help"><HelpCircle size={18} /></button><ThemeToggle /><button className="icon-button notification-button" onClick={() => notify("You have 3 new notifications")} aria-label="Notifications"><Bell size={18} /><i /></button><div className="topbar-divider" /><button className="profile" onClick={() => notify("Profile menu opened")}><span className="avatar avatar-main">PK</span><span className="profile-copy"><strong>Priya Khanna</strong><small>Owner</small></span><ChevronDown size={15} /></button></div></header>;
+function Header({ onMenu, focusSearch, notify, session }: { onMenu: () => void; focusSearch: () => void; notify: (message: string) => void; session: SessionResponse | null }) {
+  const displayRole = session?.activeGym.role ? session.activeGym.role.charAt(0) + session.activeGym.role.slice(1).toLowerCase() : "";
+  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div><button className="search-box" onClick={focusSearch}><Search size={16} /><span>Search members...</span><kbd>Ctrl K</kbd></button></div><div className="topbar-actions"><button className="icon-button help-button" onClick={() => notify("Help centre opened")} aria-label="Help"><HelpCircle size={18} /></button><ThemeToggle /><button className="icon-button notification-button" onClick={() => notify("You have 3 new notifications")} aria-label="Notifications"><Bell size={18} /><i /></button><div className="topbar-divider" /><button className="profile" onClick={() => notify("Profile menu opened")}><span className="avatar avatar-main">{session ? initials(session.user.fullName) : "…"}</span><span className="profile-copy"><strong>{session?.user.fullName ?? "Loading…"}</strong><small>{displayRole}</small></span><ChevronDown size={15} /></button></div></header>;
 }
 
-function StatCard({ icon: Icon, tone, label, value, change, note }: { icon: LucideIcon; tone: string; label: string; value: string; change: string; note: string }) {
-  return <article className="member-stat-card"><div className={`member-stat-icon ${tone}`}><Icon size={18} /></div><div className="member-stat-copy"><span>{label}</span><div><strong>{value}</strong><em><ArrowUpRight size={11} />{change}</em></div><small>{note}</small></div></article>;
+function MemberDrawer({ member, close }: { member: Member; close: () => void }) {
+  return <div className="drawer-layer" role="dialog" aria-modal="true" aria-labelledby="member-name" onMouseDown={(event) => event.currentTarget === event.target && close()}><aside className="member-drawer"><div className="drawer-top"><span>Member details</span><button className="icon-button" onClick={close} aria-label="Close member details"><X size={18} /></button></div><div className="profile-hero"><span className="avatar avatar-xl violet">{initials(member.fullName)}</span><h2 id="member-name">{member.fullName}</h2><p>{member.memberships.length} active {member.memberships.length === 1 ? "membership" : "memberships"}</p></div><section className="drawer-section"><div className="mb-3 flex items-center justify-between gap-3"><h3>Active memberships</h3><Badge variant="secondary">{member.memberships.length} active</Badge></div>{member.memberships.length ? <div className="grid gap-3">{member.memberships.map((membership) => <Card key={membership.id} size="sm"><CardHeader><CardTitle>{membership.planTypeSnapshot === "GT" ? "Gym Training" : "Personal Training"}</CardTitle><CardDescription>Membership #{membership.id.slice(-6).toUpperCase()}</CardDescription><CardAction><Badge>{membership.status.charAt(0) + membership.status.slice(1).toLowerCase()}</Badge></CardAction></CardHeader><CardContent className="flex flex-col gap-3"><div className="flex items-center gap-2 text-muted-foreground"><CalendarDays className="size-4" /><span>{new Date(membership.startsOn).toLocaleDateString("en-IN")} – {new Date(membership.endsOn).toLocaleDateString("en-IN")}</span></div><Separator /><div className="flex items-center gap-2"><IndianRupee className="size-4 text-muted-foreground" /><span className="font-medium">{money.format(Number(membership.agreedFee))}</span><span className="text-muted-foreground">Agreed fee</span></div></CardContent></Card>)}</div> : <p className="last-visit">No active memberships</p>}</section><section className="drawer-section"><h3>Balance</h3><div className="drawer-metrics"><div><strong>{money.format(Number(member.balance.totalOutstanding))}</strong><span>Outstanding</span></div><div><strong>{money.format(Number(member.balance.overdueAmount))}</strong><span>Overdue</span></div><div><strong>{money.format(Number(member.balance.availableCredit))}</strong><span>Credit</span></div></div></section><MemberDetailSections memberId={member.id} /></aside></div>;
 }
 
-function StatusPill({ status }: { status: Status }) {
-  return <span className={`status-pill ${status.toLowerCase()}`}><i />{status}</span>;
-}
+function MemberDetailSections({ memberId }: { memberId: string }) {
+  const [details, setDetails] = useState<MemberDetailsResponse | null>(null);
+  const [error, setError] = useState("");
+  const [remark, setRemark] = useState("");
+  const [isSavingRemark, setIsSavingRemark] = useState(false);
 
-function AddMemberModal({ close, addMember }: { close: () => void; addMember: (member: Member) => void }) {
-  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="add-member-title" onMouseDown={(event) => event.currentTarget === event.target && close()}><form className="modal" onSubmit={(event) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDetails() {
+      try {
+        const response = await fetch(`/api/members/${memberId}`);
+        const result = await response.json() as MemberDetailsResponse;
+        if (!response.ok) throw new Error(result.error ?? "We could not load member details.");
+        if (!cancelled) setDetails(result);
+      } catch (reason) {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : "We could not load member details.");
+      }
+    }
+
+    void loadDetails();
+    return () => { cancelled = true; };
+  }, [memberId]);
+
+  async function addRemark(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const name = String(data.get("name"));
-    const selectedPlan = String(data.get("plan"));
-    addMember({ id: Date.now(), name, initials: name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(), phone: String(data.get("phone")), email: String(data.get("email")) || "No email provided", plan: selectedPlan, status: "Active", visits: 0, lastVisit: "Not checked in yet", renewal: "08 Sep 2026", amount: selectedPlan === "Annual Unlimited" ? "\u20B918,000" : selectedPlan === "Strength Pro" ? "\u20B93,499" : "\u20B92,499", joined: "08 Aug 2026", attendance: 0, color: "violet" });
-  }}><div className="modal-header"><div><h2 id="add-member-title">Add new member</h2><p>Create their profile and send a welcome invite.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close"><X size={18} /></button></div><label>Full name<input name="name" required autoFocus placeholder="e.g. Ananya Verma" /></label><div className="form-row"><label>Phone number<input name="phone" required placeholder="+91 98765 43210" /></label><label>Email <span>Optional</span><input name="email" type="email" placeholder="name@example.com" /></label></div><label>Membership plan<select name="plan" defaultValue="" required><option value="" disabled>Select a plan</option><option>Monthly Flex</option><option>Strength Pro</option><option>Annual Unlimited</option></select></label><div className="modal-note"><ShieldCheck size={16} /><span>A welcome message and digital membership card will be sent automatically.</span></div><div className="modal-actions"><button type="button" className="button secondary" onClick={close}>Cancel</button><button className="button primary" type="submit"><UserPlus size={16} /> Add member</button></div></form></div>;
+    const body = remark.trim();
+    if (!body) return;
+
+    setIsSavingRemark(true);
+    try {
+      const response = await fetch(`/api/members/${memberId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      const created = await response.json() as MemberDetailsResponse["member"]["notes"][number] & { error?: string };
+      if (!response.ok) throw new Error(created.error ?? "We could not save the remark.");
+      setDetails((current) => current ? { ...current, member: { ...current.member, notes: [created, ...current.member.notes] } } : current);
+      setRemark("");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "We could not save the remark.");
+    } finally {
+      setIsSavingRemark(false);
+    }
+  }
+
+  if (error) return <section className="drawer-section"><p className="last-visit">{error}</p></section>;
+  if (!details) return <section className="drawer-section"><p className="last-visit">Loading contact and payment details…</p></section>;
+
+  const phoneContacts = details.member.contacts.filter((contact) => contact.kind === "PHONE" || contact.kind === "WHATSAPP");
+  const emailContacts = details.member.contacts.filter((contact) => contact.kind === "EMAIL");
+
+  return <><section className="drawer-section"><h3>Contact details</h3><dl className="contact-list"><div><dt><Phone size={14} /> Phone</dt><dd>{phoneContacts.map((contact) => contact.value).join(", ") || "Not provided"}</dd></div><div><dt><Mail size={14} /> Email</dt><dd>{emailContacts.map((contact) => contact.value).join(", ") || "Not provided"}</dd></div></dl></section><section className="drawer-section"><h3>Recent payments</h3>{details.payments.length ? <div className="timeline">{details.payments.map((payment) => <div key={payment.id}><i className="green" /><span><strong><CreditCard size={12} /> {money.format(Number(payment.amount))} · {payment.paymentMode.name}</strong><small>Paid to {payment.recipient.displayName} · {new Date(payment.paidOn).toLocaleDateString("en-IN")} · {payment.status.toLowerCase()}</small></span></div>)}</div> : <p className="last-visit">No payments recorded yet</p>}</section><section className="drawer-section"><h3>Remarks</h3><form className="member-remark-form" onSubmit={addRemark}><textarea value={remark} onChange={(event) => setRemark(event.target.value)} maxLength={2000} placeholder="Add a remark…" aria-label="Add a remark" /><button className="button secondary" type="submit" disabled={isSavingRemark || !remark.trim()}>{isSavingRemark ? "Saving…" : "Add remark"}</button></form>{details.member.notes.length ? <div className="timeline member-remarks">{details.member.notes.map((note) => <div key={note.id}><i className="purple" /><span><strong>{note.createdBy?.fullName ?? "Team member"}</strong><small>{note.body} · {new Date(note.createdAt).toLocaleDateString("en-IN")}</small></span></div>)}</div> : <p className="last-visit">No remarks yet</p>}</section></>;
 }
 
-function MemberDrawer({ member, close, notify }: { member: Member; close: () => void; notify: (message: string) => void }) {
-  return <div className="drawer-layer" role="dialog" aria-modal="true" aria-labelledby="member-name" onMouseDown={(event) => event.currentTarget === event.target && close()}><aside className="member-drawer"><div className="drawer-top"><span>Member profile</span><button className="icon-button" onClick={close} aria-label="Close profile"><X size={18} /></button></div><div className="profile-hero"><span className={`avatar avatar-xl ${member.color}`}>{member.initials}</span><h2 id="member-name">{member.name}</h2><StatusPill status={member.status} /><p>Member since {member.joined}</p></div><div className="drawer-actions"><button onClick={() => notify(`Message sent to ${member.name}`)}><Mail size={16} /> Message</button><button onClick={() => notify(`Calling ${member.phone}`)}><Phone size={16} /> Call</button><button onClick={() => notify("More actions opened")}><MoreHorizontal size={16} /> More</button></div><section className="drawer-section"><h3>Membership</h3><div className="membership-card"><div><span>{member.plan}</span><strong>{member.amount}</strong></div><div><small>Next renewal</small><b>{member.renewal}</b></div></div></section><section className="drawer-section"><h3>Activity this month</h3><div className="drawer-metrics"><div><strong>{member.visits}</strong><span>Visits</span></div><div><strong>{member.attendance}%</strong><span>Attendance</span></div><div><strong>4.8</strong><span>Avg. / week</span></div></div><div className="activity-progress"><span><i style={{ width: `${member.attendance}%` }} /></span><small>{member.attendance >= 70 ? "On track with their monthly goal" : "Below their usual attendance"}</small></div></section><section className="drawer-section"><h3>Contact</h3><dl className="contact-list"><div><dt><Mail size={14} /> Email</dt><dd>{member.email}</dd></div><div><dt><Phone size={14} /> Phone</dt><dd>{member.phone}</dd></div></dl></section><section className="drawer-section"><h3>Recent activity</h3><div className="timeline"><div><i className="green" /><span><strong>Gym check-in</strong><small>{member.lastVisit}</small></span></div><div><i className="purple" /><span><strong>Payment completed</strong><small>24 Jul 2026 - {member.amount}</small></span></div><div><i className="blue" /><span><strong>Profile updated</strong><small>19 Jul 2026</small></span></div></div></section></aside></div>;
+function AddMemberDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (open: boolean) => void; onCreated: () => Promise<void> }) {
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/members/addMember", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          memberNumber: `MEM-${Date.now()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`,
+          joinedOn: new Date().toISOString(),
+          contacts: [
+            phone.trim() && { kind: "PHONE", value: phone.trim(), isPrimary: true },
+            email.trim() && { kind: "EMAIL", value: email.trim(), isPrimary: true },
+          ].filter(Boolean),
+        }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "We could not create the member.");
+
+      await onCreated();
+      onOpenChange(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "We could not create the member.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="gap-5 p-6 sm:max-w-lg"><DialogHeader><DialogTitle>Add member</DialogTitle><DialogDescription>Create a member profile for this gym.</DialogDescription></DialogHeader><form className="grid gap-4" onSubmit={submit}><div className="grid gap-2"><Label htmlFor="member-full-name">Full name</Label><Input id="member-full-name" value={fullName} onChange={(event) => setFullName(event.target.value)} required autoFocus placeholder="e.g. Ananya Verma" /></div><div className="grid gap-4 sm:grid-cols-2"><div className="grid gap-2"><Label htmlFor="member-phone">Phone number <span className="font-normal text-muted-foreground">Optional</span></Label><Input id="member-phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+91 98765 43210" /></div><div className="grid gap-2"><Label htmlFor="member-email">Email <span className="font-normal text-muted-foreground">Optional</span></Label><Input id="member-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></div></div>{error && <p className="form-error" role="alert">{error}</p>}<DialogFooter className="mt-2"><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating…" : "Add member"}</Button></DialogFooter></form></DialogContent></Dialog>;
 }
 
 export default function MembersPage() {
-  const [members, setMembers] = useState(seedMembers);
-  const [status, setStatus] = useState<StatusFilter>("All");
+  const [members, setMembers] = useState<Member[]>([]);
   const [query, setQuery] = useState("");
-  const [plan, setPlan] = useState("All plans");
-  const [attendance, setAttendance] = useState("Any attendance");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [activeMember, setActiveMember] = useState<Member | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState("");
-  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [session, setSession] = useState<SessionResponse | null>(null);
+  const [activeMember, setActiveMember] = useState<Member | null>(null);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
-  const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2600); };
-  const filteredMembers = useMemo(() => members.filter((member) => {
-    const text = `${member.name} ${member.email} ${member.phone} ${member.plan}`.toLowerCase();
-    const attendanceMatches = attendance === "Any attendance" || (attendance === "Above 70%" ? member.attendance >= 70 : attendance === "40-70%" ? member.attendance >= 40 && member.attendance < 70 : member.attendance < 40);
-    return (status === "All" || member.status === status) && (plan === "All plans" || member.plan === plan) && attendanceMatches && text.includes(query.trim().toLowerCase());
-  }), [members, status, plan, attendance, query]);
-  const allVisibleSelected = filteredMembers.length > 0 && filteredMembers.every((member) => selected.has(member.id));
-
-  function toggleAll() {
-    setSelected((current) => { const next = new Set(current); if (allVisibleSelected) filteredMembers.forEach((member) => next.delete(member.id)); else filteredMembers.forEach((member) => next.add(member.id)); return next; });
+  function notify(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2600);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMembers() {
+      try {
+        const response = await fetch("/api/members/allMembers");
+        const result = await response.json() as MembersResponse;
+
+        if (!response.ok) throw new Error(result.error ?? "We could not load members.");
+        if (!cancelled) setMembers(result.members);
+      } catch (reason) {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : "We could not load members.");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    void loadMembers();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/session");
+        if (!response.ok) return;
+        const result = await response.json() as SessionResponse;
+        if (!cancelled) setSession(result);
+      } catch {
+        // The members view remains usable if session display data cannot be loaded.
+      }
+    }
+
+    void loadSession();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function refreshMembers() {
+    const response = await fetch("/api/members/allMembers");
+    const result = await response.json() as MembersResponse;
+    if (!response.ok) throw new Error(result.error ?? "We could not load members.");
+    setMembers(result.members);
+  }
+
+  const filteredMembers = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    if (!search) return members;
+    return members.filter((member) => `${member.fullName} ${member.memberships.map((membership) => membership.planTypeSnapshot).join(" ")}`.toLowerCase().includes(search));
+  }, [members, query]);
+
+  const totals = useMemo(() => ({
+    activeMemberships: members.reduce((total, member) => total + member.memberships.length, 0),
+    outstanding: members.reduce((total, member) => total + Number(member.balance.totalOutstanding), 0),
+    overdue: members.filter((member) => Number(member.balance.overdueAmount) > 0).length,
+  }), [members]);
 
   function exportMembers() {
-    const csv = ["Name,Email,Phone,Plan,Status,Visits,Renewal", ...filteredMembers.map((member) => [member.name, member.email, member.phone, member.plan, member.status, member.visits, member.renewal].map((value) => `"${value}"`).join(","))].join("\n");
+    const csv = [
+      "Client name,Active memberships,Membership status,Dues",
+      ...filteredMembers.map((member) => [
+        member.fullName,
+        member.memberships.map((membership) => `${membership.planTypeSnapshot} · ${money.format(Number(membership.agreedFee))}`).join("; ") || "No active memberships",
+        member.memberships.map((membership) => membership.status).join("; ") || "—",
+        money.format(Number(member.balance.totalOutstanding)),
+      ].map((value) => `"${value.replaceAll("\"", "\"\"")}"`).join(",")),
+    ].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const link = document.createElement("a"); link.href = url; link.download = "gymwise-members.csv"; link.click(); URL.revokeObjectURL(url); notify("Member list exported");
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "gecco-members.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    notify("Member list exported");
   }
 
-  function addMember(member: Member) {
-    setMembers((current) => [member, ...current]); setModalOpen(false); setStatus("All"); setQuery(""); notify(`${member.name} was added successfully`);
-  }
+  return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} /><div className="app-content"><Header onMenu={() => setMobileNav(true)} focusSearch={() => document.getElementById("member-search")?.focus()} notify={notify} session={session} /><main className="dashboard members-dashboard"><div className="page-heading members-heading"><div><p className="members-breadcrumb">Workspace <ChevronRight size={12} /> Members</p><h1>Members</h1><p>Manage your community, memberships, and dues.</p></div><div className="heading-actions"><button className="button secondary import-button" onClick={() => notify("Import is not connected yet")}><Upload size={16} /> Import</button><button className="button secondary" onClick={exportMembers} disabled={isLoading || filteredMembers.length === 0}><Download size={16} /> Export</button><button className="button primary" onClick={() => setIsAddMemberOpen(true)}><Plus size={17} /> Add member</button></div></div>
 
-  return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} /><div className="app-content"><Header onMenu={() => setMobileNav(true)} focusSearch={() => document.getElementById("member-search")?.focus()} notify={notify} /><main className="dashboard members-dashboard"><div className="page-heading members-heading"><div><p className="members-breadcrumb">Workspace <ChevronRight size={12} /> Members</p><h1>Members</h1><p>Manage your community, memberships, and renewals.</p></div><div className="heading-actions"><button className="button secondary import-button" onClick={() => notify("Import template is ready")}><Upload size={16} /> Import</button><button className="button secondary" onClick={exportMembers}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModalOpen(true)}><Plus size={17} /> Add member</button></div></div>
+    <section className="member-stats" aria-label="Member statistics"><article className="member-stat-card"><div className="member-stat-icon purple"><Users size={18} /></div><div className="member-stat-copy"><span>Total members</span><div><strong>{members.length}</strong></div><small>In your active gym</small></div></article><article className="member-stat-card"><div className="member-stat-icon green"><UserCheck size={18} /></div><div className="member-stat-copy"><span>Active memberships</span><div><strong>{totals.activeMemberships}</strong></div><small>Across all members</small></div></article><article className="member-stat-card"><div className="member-stat-icon amber"><ShieldCheck size={18} /></div><div className="member-stat-copy"><span>Outstanding dues</span><div><strong>{money.format(totals.outstanding)}</strong></div><small>Across all active memberships</small></div></article><article className="member-stat-card"><div className="member-stat-icon rose"><UserRoundX size={18} /></div><div className="member-stat-copy"><span>Overdue members</span><div><strong>{totals.overdue}</strong></div><small>Members with overdue dues</small></div></article></section>
 
-    <section className="member-stats" aria-label="Member statistics"><StatCard icon={Users} tone="purple" label="Total members" value="1,284" change="4.8%" note="58 joined this month" /><StatCard icon={UserCheck} tone="green" label="Active members" value="1,176" change="3.2%" note="91.6% of total members" /><StatCard icon={CalendarDays} tone="amber" label="Expiring soon" value="32" change="6.7%" note="Within the next 14 days" /><StatCard icon={UserRoundX} tone="rose" label="Needs attention" value="18" change="2.1%" note="Inactive for 21+ days" /></section>
-
-    <section className="panel members-panel"><div className="members-panel-head"><div><h2>All members</h2><p>{filteredMembers.length === members.length ? "1,284 people in your community" : `${filteredMembers.length} matching members`}</p></div><div className="panel-head-actions"><button className="button secondary" onClick={() => notify("Saved member views opened")}><Sparkles size={14} /> Saved views <ChevronDown size={13} /></button><button className="icon-button" onClick={() => notify("Table options opened")} aria-label="Table options"><MoreHorizontal size={17} /></button></div></div><div className="member-toolbar"><div className="status-tabs" role="tablist">{(["All", "Active", "Expiring", "Paused", "Inactive"] as StatusFilter[]).map((item) => <button role="tab" aria-selected={status === item} className={status === item ? "selected" : ""} onClick={() => { setStatus(item); setPage(1); }} key={item}>{item}<span>{item === "All" ? "1,284" : item === "Active" ? "1,176" : item === "Expiring" ? "32" : item === "Paused" ? "21" : "55"}</span></button>)}</div><div className="member-tools"><label className="member-search"><Search size={15} /><input id="member-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search members..." />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button>}</label><button className={`button secondary filter-trigger ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen((open) => !open)}><Filter size={15} /> Filter{(plan !== "All plans" || attendance !== "Any attendance") && <i />}</button></div></div>
-      {filtersOpen && <div className="member-filters"><div><label>Membership<select value={plan} onChange={(event) => setPlan(event.target.value)}><option>All plans</option><option>Monthly Flex</option><option>Strength Pro</option><option>Annual Unlimited</option></select></label><label>Attendance<select value={attendance} onChange={(event) => setAttendance(event.target.value)}><option>Any attendance</option><option>Above 70%</option><option>40-70%</option><option>Below 40%</option></select></label><label>Joined<select onChange={() => notify("Join date filter applied")} defaultValue="Any time"><option>Any time</option><option>This month</option><option>Last 3 months</option><option>This year</option></select></label></div><button onClick={() => { setPlan("All plans"); setAttendance("Any attendance"); }}>Clear filters</button></div>}
-      {selected.size > 0 && <div className="bulk-bar"><div><span>{selected.size}</span><strong>{selected.size === 1 ? "member" : "members"} selected</strong></div><button onClick={() => notify(`Message queued for ${selected.size} members`)}><Mail size={14} /> Send message</button><button onClick={() => notify("Membership action opened")}><CreditCard size={14} /> Change membership</button><button className="bulk-more" onClick={() => notify("More bulk actions opened")}><MoreHorizontal size={15} /></button><button className="bulk-close" onClick={() => setSelected(new Set())}><X size={15} /></button></div>}
-      <div className="member-table-wrap roster-wrap"><table className="member-table roster-table"><thead><tr><th className="check-column"><input type="checkbox" aria-label="Select all visible members" checked={allVisibleSelected} onChange={toggleAll} /></th><th>Member</th><th>Membership</th><th>Status</th><th>Visits</th><th>Last visit</th><th>Next renewal</th><th aria-label="Actions" /></tr></thead><tbody>{filteredMembers.map((member) => <tr key={member.id} onClick={() => setActiveMember(member)}><td className="check-column" onClick={(event) => event.stopPropagation()}><input type="checkbox" aria-label={`Select ${member.name}`} checked={selected.has(member.id)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(member.id)) next.delete(member.id); else next.add(member.id); return next; })} /></td><td><div className="member-cell"><span className={`avatar ${member.color}`}>{member.initials}</span><div><strong>{member.name}</strong><small>{member.email}</small></div></div></td><td><div className="plan-cell"><strong>{member.plan}</strong><small>{member.amount} &middot; {member.plan === "Annual Unlimited" ? "Yearly" : "Monthly"}</small></div></td><td><StatusPill status={member.status} /></td><td><div className="visits-cell"><strong>{member.visits}</strong><span><i style={{ width: `${member.attendance}%` }} /></span></div></td><td><span className={member.lastVisit.includes("Today") ? "recent-visit" : "last-visit"}>{member.lastVisit}</span></td><td><div className={`renewal-cell ${member.status === "Expiring" || member.status === "Inactive" ? "attention" : ""}`}><strong>{member.renewal}</strong><small>{member.status === "Expiring" ? "Due soon" : member.status === "Inactive" ? "Payment overdue" : "Auto-renew on"}</small></div></td><td><button className="icon-button small row-more" onClick={(event) => { event.stopPropagation(); setActiveMember(member); }} aria-label={`Open ${member.name}`}><MoreHorizontal size={16} /></button></td></tr>)}{filteredMembers.length === 0 && <tr><td colSpan={8}><div className="member-empty"><div><Search size={20} /></div><strong>No members found</strong><span>Try adjusting your search or filters.</span><button onClick={() => { setQuery(""); setStatus("All"); setPlan("All plans"); setAttendance("Any attendance"); }}>Clear all filters</button></div></td></tr>}</tbody></table></div>
-      <div className="table-footer"><span>Showing <strong>{filteredMembers.length ? 1 : 0}-{filteredMembers.length}</strong> of <strong>{status === "All" && !query && plan === "All plans" ? "1,284" : filteredMembers.length}</strong> members</span><div><label>Rows per page<select defaultValue="10"><option>10</option><option>25</option><option>50</option></select></label><button className="icon-button small" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={16} /></button><span className="page-number">{page}</span><button className="icon-button small" onClick={() => { setPage((value) => value + 1); notify("Loaded the next page"); }}><ChevronRight size={16} /></button></div></div></section><footer className="dashboard-footer"><span>&copy; 2026 Gymwise Technologies</span><span><ShieldCheck size={11} /> Your member data is encrypted and secure</span></footer></main></div>
-    <nav className="mobile-tabs" aria-label="Mobile navigation"><Link href="/"><LayoutDashboard size={18} />Overview</Link><Link className="active" href="/members"><Users size={18} />Members</Link><button className="mobile-add" onClick={() => setModalOpen(true)} aria-label="Add member"><Plus size={21} /></button><Link href="/attendance"><Activity size={18} />Attendance</Link><Link href="/messages"><MessageCircle size={18} />Messages</Link></nav>
-    {modalOpen && <AddMemberModal close={() => setModalOpen(false)} addMember={addMember} />}{activeMember && <MemberDrawer member={activeMember} close={() => setActiveMember(null)} notify={notify} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}
+    <section className="panel members-panel"><div className="members-panel-head"><div><h2>All members</h2><p>{isLoading ? "Loading members…" : query ? `${filteredMembers.length} matching members` : `${members.length} people in your community`}</p></div></div><div className="member-toolbar"><div /><div className="member-tools"><label className="member-search"><Search size={15} /><input id="member-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search members or memberships..." />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button>}</label></div></div>
+      <div className="member-table-wrap roster-wrap"><table className="member-table roster-table"><thead><tr><th>Client name</th><th>Active memberships</th><th>Membership status</th><th>Dues</th><th aria-label="Actions" /></tr></thead><tbody>{isLoading ? <tr><td colSpan={5}><div className="member-empty" aria-live="polite"><div><Spinner className="size-5" /></div><strong>Loading members</strong><span>Getting the latest member data for this gym.</span></div></td></tr> : error ? <tr><td colSpan={5}><div className="member-empty"><div><X size={20} /></div><strong>Could not load members</strong><span>{error}</span></div></td></tr> : filteredMembers.map((member) => <tr key={member.id}><td><div className="member-cell"><Avatar size="lg"><AvatarFallback>{initials(member.fullName)}</AvatarFallback></Avatar><strong>{member.fullName}</strong></div></td><td>{member.memberships.length ? <div className="flex flex-wrap gap-2">{member.memberships.map((membership) => <Badge key={membership.id} variant="outline">{membership.planTypeSnapshot} <span aria-hidden>·</span> {money.format(Number(membership.agreedFee))}</Badge>)}</div> : <span className="last-visit">No active memberships</span>}</td><td>{member.memberships.length ? <div className="flex flex-col items-start gap-1"><Badge>{member.memberships.length} active</Badge><span className="text-xs text-muted-foreground">All memberships current</span></div> : <span className="last-visit">—</span>}</td><td><div className="flex flex-col gap-1"><strong className={cn("text-sm", Number(member.balance.overdueAmount) > 0 && "text-destructive")}>{money.format(Number(member.balance.totalOutstanding))}</strong><span className="text-xs text-muted-foreground">Total outstanding</span></div></td><td><button className="icon-button small row-more" onClick={() => setActiveMember(member)} aria-label={`Open ${member.fullName} details`}><MoreHorizontal size={16} /></button></td></tr>)}{!filteredMembers.length && !isLoading && !error && <tr><td colSpan={5}><div className="member-empty"><div><Search size={20} /></div><strong>No members found</strong><span>Try a different search term.</span><button onClick={() => setQuery("")}>Clear search</button></div></td></tr>}</tbody></table></div>
+      {!isLoading && !error && <div className="table-footer"><span>Showing <strong>{filteredMembers.length ? 1 : 0}-{filteredMembers.length}</strong> of <strong>{members.length}</strong> members</span></div>}</section><footer className="dashboard-footer"><span>&copy; 2026 Gecco Technologies</span><span><ShieldCheck size={11} /> Your member data is encrypted and secure</span></footer></main></div>
+    <nav className="mobile-tabs" aria-label="Mobile navigation"><Link href="/dashboard"><LayoutDashboard size={18} />Overview</Link><Link className="active" href="/members"><Users size={18} />Members</Link><button className="mobile-add" onClick={() => setIsAddMemberOpen(true)} aria-label="Add member"><Plus size={21} /></button><Link href="/attendance"><UserCheck size={18} />Attendance</Link><Link href="/messages"><MessageCircle size={18} />Messages</Link></nav><AddMemberDialog open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} onCreated={async () => { await refreshMembers(); notify("Member added successfully"); }} />{activeMember && <MemberDrawer member={activeMember} close={() => setActiveMember(null)} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}
   </div>;
 }
