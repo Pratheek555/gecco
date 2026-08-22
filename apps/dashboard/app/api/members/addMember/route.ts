@@ -1,4 +1,6 @@
 import { prisma } from "db/client";
+import { NextResponse } from "next/server";
+import { getSession } from "@/app/api/auth/session";
 
 const memberStatuses = ["ACTIVE", "ARCHIVED"] as const;
 const contactKinds = ["PHONE", "EMAIL", "WHATSAPP", "OTHER"] as const;
@@ -12,7 +14,6 @@ type ContactInput = {
 };
 
 type CreateMemberBody = {
-  gymId?: string;
   fullName?: string;
   memberNumber?: string;
   joinedOn?: string;
@@ -32,54 +33,60 @@ function isContactInput(value: unknown): value is ContactInput {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as CreateMemberBody;
-  const { gymId, fullName, memberNumber, joinedOn, contacts = [] } = body;
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  let body: CreateMemberBody;
+  try {
+    body = await request.json() as CreateMemberBody;
+  } catch {
+    return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+  }
+
+  const { fullName, memberNumber, joinedOn, contacts = [] } = body;
   const status = body.status ?? "ACTIVE";
 
-  if (!gymId || !fullName || !memberNumber || !joinedOn) {
-    return Response.json(
-      { error: "gymId, fullName, memberNumber, and joinedOn are required." },
+  if (typeof fullName !== "string" || !fullName.trim() || typeof memberNumber !== "string" || !memberNumber.trim() || typeof joinedOn !== "string") {
+    return NextResponse.json(
+      { error: "fullName, memberNumber, and joinedOn are required." },
       { status: 400 },
     );
   }
 
   if (!memberStatuses.includes(status)) {
-    return Response.json({ error: "Invalid member status." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid member status." }, { status: 400 });
   }
 
   if (!Array.isArray(contacts) || !contacts.every(isContactInput)) {
-    return Response.json({ error: "Invalid contacts payload." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid contacts payload." }, { status: 400 });
   }
 
-  const gym = await prisma.gym.findUnique({
-    where: { id: gymId },
-    select: { id: true },
-  });
-
-  if (!gym) {
-    return Response.json(
-      { error: "Gym not found. Use the gymId returned when the gym was created." },
-      { status: 404 },
-    );
+  const joinedDate = new Date(joinedOn);
+  if (Number.isNaN(joinedDate.getTime())) {
+    return NextResponse.json({ error: "joinedOn must be a valid date." }, { status: 400 });
   }
 
-  const member = await prisma.member.create({
-    data: {
-      gym: { connect: { id: gymId } },
-      fullName,
-      memberNumber,
-      joinedOn: new Date(joinedOn),
-      status,
-      contacts: {
-        create: contacts.map(({ kind, value, isPrimary = false }) => ({
-          kind,
-          value,
-          isPrimary,
-        })),
+  try {
+    const member = await prisma.member.create({
+      data: {
+        gymId: session.activeGym.id,
+        fullName: fullName.trim(),
+        memberNumber: memberNumber.trim(),
+        joinedOn: joinedDate,
+        status,
+        contacts: {
+          create: contacts.map(({ kind, value, isPrimary = false }) => ({
+            kind,
+            value: value.trim(),
+            isPrimary,
+          })),
+        },
       },
-    },
-    include: { contacts: true },
-  });
+      include: { contacts: true },
+    });
 
-  return Response.json(member, { status: 201 });
+    return NextResponse.json(member, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "We could not create the member. The member number may already be in use." }, { status: 409 });
+  }
 }

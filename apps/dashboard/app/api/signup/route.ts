@@ -72,6 +72,14 @@ export async function POST(request: Request) {
         ],
       });
 
+      await tx.paymentRecipient.create({
+        data: {
+          gymId: gym.id,
+          displayName: gym.name,
+          recipientType: "GYM",
+        },
+      });
+
       return { userId: user.id, gymId: gym.id };
     }, {
       maxWait: 10_000,

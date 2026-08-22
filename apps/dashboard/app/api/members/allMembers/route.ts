@@ -9,26 +9,53 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const gymId = session.activeGym.id;
-  const members = await prisma.member.findMany({
-    where: {
-      gymId,
-    },
-  });
-
-  const memberships = await prisma.membership.findMany({
-    where: {
-      memberId: {
-        in: members.map((member) => member.id),
+  const [members, memberSummary] = await Promise.all([
+    prisma.member.findMany({
+      where: { gymId },
+      orderBy: { fullName: "asc" },
+      select: {
+        id: true,
+        fullName: true,
+        memberships: {
+          where: { status: "ACTIVE" },
+          orderBy: { startsOn: "asc" },
+          select: {
+            id: true,
+            planTypeSnapshot: true,
+            agreedFee: true,
+            startsOn: true,
+            endsOn: true,
+            status: true,
+          },
+        },
       },
-    },
-  });
-  const memberSummary = await prisma.memberBalanceSummary.findMany({
-    where: {
-      memberId: {
-        in: members.map((member) => member.id),
+    }),
+    prisma.memberBalanceSummary.findMany({
+      where: { gymId },
+      select: {
+        memberId: true,
+        totalOutstanding: true,
+        overdueAmount: true,
+        availableCredit: true,
+        oldestDueOn: true,
+        paymentState: true,
       },
-    },
-  });
+    }),
+  ]);
 
-  return NextResponse.json({ gymId, members, memberships, memberSummary });
+  const summariesByMemberId = new Map(memberSummary.map((summary) => [summary.memberId, summary]));
+
+  return NextResponse.json({
+    gymId,
+    members: members.map((member) => ({
+      ...member,
+      balance: summariesByMemberId.get(member.id) ?? {
+        totalOutstanding: "0",
+        overdueAmount: "0",
+        availableCredit: "0",
+        oldestDueOn: null,
+        paymentState: "PAID",
+      },
+    })),
+  });
 }
