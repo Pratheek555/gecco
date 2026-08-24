@@ -228,7 +228,13 @@ export default function MembersPage() {
         const result = await response.json() as MembersResponse;
 
         if (!response.ok) throw new Error(result.error ?? "We could not load members.");
-        if (!cancelled) setMembers(result.members);
+        if (!cancelled) {
+          setMembers(result.members);
+          const searchParams = new URLSearchParams(window.location.search);
+          if (searchParams.get("add") === "1") setIsAddMemberOpen(true);
+          const requestedMember = result.members.find((member) => member.id === searchParams.get("member"));
+          if (requestedMember) setActiveMember(requestedMember);
+        }
       } catch (reason) {
         if (!cancelled) setError(reason instanceof Error ? reason.message : "We could not load members.");
       } finally {
