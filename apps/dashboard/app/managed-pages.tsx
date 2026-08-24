@@ -22,14 +22,27 @@ import {
   UserPlus,
   Users,
   WalletCards,
+  X,
   Zap,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 export type ManagedView = "Overview" | "Members" | "Memberships" | "Trainers" | "Reports" | "Automations";
 type Notify = (message: string) => void;
 
-const plans = [
+type PlanCard = {
+  name: string;
+  detail: string;
+  price: string;
+  cadence: string;
+  members: number;
+  revenue: string;
+  growth: string;
+  state: "Active" | "Archived";
+  tone: string;
+};
+
+const plans: PlanCard[] = [
   { name: "Annual Unlimited", detail: "Unlimited access across every location", price: "₹18,000", cadence: "/ year", members: 486, revenue: "₹87.5L", growth: "+12.4%", state: "Active", tone: "purple" },
   { name: "Strength Pro", detail: "Gym access with four coached sessions", price: "₹3,499", cadence: "/ month", members: 352, revenue: "₹12.3L", growth: "+8.1%", state: "Active", tone: "blue" },
   { name: "Monthly Flex", detail: "Flexible monthly access, cancel anytime", price: "₹2,499", cadence: "/ month", members: 318, revenue: "₹7.9L", growth: "+3.6%", state: "Active", tone: "green" },
@@ -50,9 +63,9 @@ const workflowSeed = [
   { id: 4, name: "Renewal reminder", detail: "Remind members seven and two days before renewal.", trigger: "Renewal approaching", runs: "92 runs", success: "96.8%", active: false, icon: CalendarDays, tone: "amber" },
 ];
 
-function PageHeader({ eyebrow, title, copy, action, icon: Icon = Plus, onAction }: { eyebrow: string; title: string; copy: string; action: string; icon?: LucideIcon; onAction: () => void }) {
+function PageHeader({ eyebrow, title, copy, action, icon: Icon = Plus, onAction, secondaryAction, onSecondaryAction }: { eyebrow: string; title: string; copy: string; action: string; icon?: LucideIcon; onAction: () => void; secondaryAction?: string; onSecondaryAction?: () => void }) {
   const parent = eyebrow.includes("WORKSPACE") ? "Workspace" : "Manage";
-  return <div className="page-heading managed-heading"><div><p className="managed-breadcrumb" title={eyebrow}>{parent} <ChevronRight size={12} /> {title}</p><h1>{title}</h1><p>{copy}</p></div><button className="button primary" onClick={onAction}><Icon size={16} />{action}</button></div>;
+  return <div className="page-heading managed-heading"><div><p className="managed-breadcrumb" title={eyebrow}>{parent} <ChevronRight size={12} /> {title}</p><h1>{title}</h1><p>{copy}</p></div><div className="heading-actions">{secondaryAction && <button className="button secondary" onClick={onSecondaryAction}><UserPlus size={16} />{secondaryAction}</button>}<button className="button primary" onClick={onAction}><Icon size={16} />{action}</button></div></div>;
 }
 
 function SummaryCard({ icon: Icon, tone, label, value, detail }: { icon: LucideIcon; tone: string; label: string; value: string; detail: string }) {
@@ -71,12 +84,107 @@ function Tab({ active, children, onClick }: { active: boolean; children: React.R
   return <button className={active ? "active" : ""} onClick={onClick}>{children}</button>;
 }
 
+function AddPlanModal({ close, onCreated }: { close: () => void; onCreated: (plan: PlanCard) => void }) {
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState<"GT" | "PT">("GT");
+  const [monthlyFee, setMonthlyFee] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, name, type, standardMonthlyFee: monthlyFee, isActive }),
+      });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Could not create the plan.");
+
+      onCreated({
+        name: name.trim(),
+        detail: `${type === "GT" ? "Gym Training" : "Personal Training"} · ${code.trim()}`,
+        price: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(monthlyFee)),
+        cadence: "/ month",
+        members: 0,
+        revenue: "₹0",
+        growth: "—",
+        state: isActive ? "Active" : "Archived",
+        tone: type === "GT" ? "purple" : "blue",
+      });
+      close();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not create the plan.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="add-plan-title" onMouseDown={event => event.currentTarget === event.target && close()}><form className="modal" onSubmit={submit}><div className="modal-header"><div><h2 id="add-plan-title">Add plan</h2><p>Create a membership plan for your gym.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close" disabled={submitting}><X size={18} /></button></div><div className="form-row"><label>Plan code<input required autoFocus value={code} onChange={event => setCode(event.target.value)} placeholder="e.g. GT-MONTHLY" disabled={submitting} /></label><label>Plan type<select value={type} onChange={event => setType(event.target.value as "GT" | "PT")} disabled={submitting}><option value="GT">Gym Training</option><option value="PT">Personal Training</option></select></label></div><label>Plan name<input required value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Monthly Flex" disabled={submitting} /></label><label>Monthly fee<input required type="number" min="0" step="0.01" value={monthlyFee} onChange={event => setMonthlyFee(event.target.value)} placeholder="₹ 0" disabled={submitting} /></label><label className="plan-active-toggle"><input type="checkbox" checked={isActive} onChange={event => setIsActive(event.target.checked)} disabled={submitting} /> Make this plan active</label>{error && <p role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={submitting}>Cancel</button><button className="button primary" type="submit" disabled={submitting}>{submitting ? "Creating…" : "Create plan"}</button></div></form></div>;
+}
+
+type MemberOption = { id: string; fullName: string };
+type PlanOption = { id: string; code: string; name: string; type: "GT" | "PT"; standardMonthlyFee: string | number; isActive: boolean };
+
+function dateInputValue(date: Date) { return date.toISOString().slice(0, 10); }
+
+function AssignPlanModal({ close, onAssigned }: { close: () => void; onAssigned: () => void }) {
+  const today = dateInputValue(new Date());
+  const nextMonth = new Date();
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const [members, setMembers] = useState<MemberOption[]>([]);
+  const [availablePlans, setAvailablePlans] = useState<PlanOption[]>([]);
+  const [memberId, setMemberId] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [startsOn, setStartsOn] = useState(today);
+  const [endsOn, setEndsOn] = useState(dateInputValue(nextMonth));
+  const [agreedFee, setAgreedFee] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => { void (async () => {
+    try {
+      const [membersResponse, plansResponse] = await Promise.all([fetch("/api/members/allMembers"), fetch("/api/plans")]);
+      const membersData = await membersResponse.json() as { members?: MemberOption[]; error?: string };
+      const plansData = await plansResponse.json() as { plans?: PlanOption[]; error?: string };
+      if (!membersResponse.ok || !plansResponse.ok || !membersData.members || !plansData.plans) throw new Error(membersData.error ?? plansData.error ?? "Could not load members and plans.");
+      setMembers(membersData.members);
+      setAvailablePlans(plansData.plans.filter(plan => plan.isActive));
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load members and plans."); }
+    finally { setLoading(false); }
+  })(); }, []);
+
+  function selectPlan(id: string) { setPlanId(id); const plan = availablePlans.find(item => item.id === id); if (plan) setAgreedFee(String(plan.standardMonthlyFee)); }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true); setError("");
+    try {
+      const response = await fetch(`/api/members/${memberId}/memberships`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, startsOn, endsOn, agreedFee }) });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Could not assign the plan.");
+      onAssigned(); close();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not assign the plan."); }
+    finally { setSubmitting(false); }
+  }
+
+  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="assign-plan-title" onMouseDown={event => event.currentTarget === event.target && close()}><form className="modal" onSubmit={submit}><div className="modal-header"><div><h2 id="assign-plan-title">Assign plan</h2><p>Give a member an active membership plan.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close" disabled={submitting}><X size={18} /></button></div><label>Member<select required autoFocus value={memberId} onChange={event => setMemberId(event.target.value)} disabled={loading || submitting}><option value="" disabled>Select a member</option>{members.map(member => <option key={member.id} value={member.id}>{member.fullName}</option>)}</select></label><label>Plan<select required value={planId} onChange={event => selectPlan(event.target.value)} disabled={loading || submitting}><option value="" disabled>{availablePlans.length ? "Select an active plan" : "No active plans available"}</option>{availablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name} ({plan.code}) · ₹{plan.standardMonthlyFee}</option>)}</select></label><div className="form-row"><label>Starts on<input required type="date" value={startsOn} onChange={event => setStartsOn(event.target.value)} disabled={submitting} /></label><label>Ends on<input required type="date" value={endsOn} onChange={event => setEndsOn(event.target.value)} disabled={submitting} /></label></div><label>Agreed fee<input required type="number" min="0" step="0.01" value={agreedFee} onChange={event => setAgreedFee(event.target.value)} placeholder="₹ 0" disabled={submitting} /></label>{error && <p role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={submitting}>Cancel</button><button className="button primary" type="submit" disabled={loading || submitting || !memberId || !planId}>{submitting ? "Assigning…" : "Assign plan"}</button></div></form></div>;
+}
+
 function Memberships({ notify }: { notify: Notify }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Active" | "Archived">("All");
-  const visible = useMemo(() => plans.filter((plan) => (filter === "All" || plan.state === filter) && `${plan.name} ${plan.detail}`.toLowerCase().includes(query.toLowerCase())), [filter, query]);
+  const [items, setItems] = useState(plans);
+  const [isAddPlanOpen, setIsAddPlanOpen] = useState(false);
+  const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
+  const visible = useMemo(() => items.filter((plan) => (filter === "All" || plan.state === filter) && `${plan.name} ${plan.detail}`.toLowerCase().includes(query.toLowerCase())), [filter, items, query]);
   return <>
-    <PageHeader eyebrow="MEMBERSHIP MANAGEMENT" title="Memberships" copy="Create plans, track adoption, and stay ahead of upcoming renewals." action="Create plan" onAction={() => notify("Membership plan builder opened")} />
+    <PageHeader eyebrow="MEMBERSHIP MANAGEMENT" title="Memberships" copy="Create plans, track adoption, and stay ahead of upcoming renewals." action="Create plan" onAction={() => setIsAddPlanOpen(true)} secondaryAction="Assign plan" onSecondaryAction={() => setIsAssignPlanOpen(true)} />
     <SummaryGrid>
       <SummaryCard icon={Users} tone="purple" label="Active memberships" value="1,284" detail="+4.8% from last month" />
       <SummaryCard icon={WalletCards} tone="green" label="Recurring revenue" value="₹12.8L" detail="₹97K above last month" />
@@ -91,6 +199,8 @@ function Memberships({ notify }: { notify: Notify }) {
       <button className="managed-row-action" onClick={() => notify(`${plan.name} opened for editing`)}>Manage plan <ChevronRight size={15} /></button>
     </article>)}{visible.length === 0 && <Empty icon={CreditCard} label="No matching plans" />}</section>
     <Renewals notify={notify} />
+    {isAddPlanOpen && <AddPlanModal close={() => setIsAddPlanOpen(false)} onCreated={plan => { setItems(current => [plan, ...current]); notify("Membership plan created successfully"); }} />}
+    {isAssignPlanOpen && <AssignPlanModal close={() => setIsAssignPlanOpen(false)} onAssigned={() => notify("Plan assigned successfully")} />}
   </>;
 }
 
