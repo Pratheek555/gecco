@@ -196,6 +196,12 @@ export default function PaymentsPage() {
     const timeout = window.setTimeout(() => { void loadAnalytics().catch(() => setAnalytics(null)); }, 0);
     return () => window.clearTimeout(timeout);
   }, [loadAnalytics]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (new URLSearchParams(window.location.search).get("record") === "1") setModal(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   const visible = useMemo(() => payments.filter(payment => (tab === "All" || displayPaymentStatus(payment.status) === tab) && `${payment.member.fullName} ${payment.id} ${payment.membership?.planName ?? ""} ${payment.paymentMode.name}`.toLowerCase().includes(query.trim().toLowerCase())), [payments, tab, query]);
   const counts: Record<PaymentTab, number> = payments.reduce((total, payment) => {

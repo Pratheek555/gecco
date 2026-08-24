@@ -3,6 +3,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  AlertCircle,
+  ArrowRight,
   ArrowUpRight,
   BarChart3,
   CalendarDays,
@@ -13,9 +15,13 @@ import {
   CreditCard,
   Download,
   Dumbbell,
+  IndianRupee,
+  LoaderCircle,
   MessageCircle,
   MoreHorizontal,
   Plus,
+  ReceiptText,
+  RefreshCw,
   Search,
   Sparkles,
   TrendingUp,
@@ -25,12 +31,20 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export type ManagedView = "Overview" | "Members" | "Memberships" | "Trainers" | "Reports" | "Automations";
 type Notify = (message: string) => void;
 
+type PlanOption = { id: string; code: string; name: string; type: "GT" | "PT"; standardMonthlyFee: string | number; isActive: boolean };
 type PlanCard = {
+  id: string;
+  code: string;
   name: string;
   detail: string;
   price: string;
@@ -42,12 +56,21 @@ type PlanCard = {
   tone: string;
 };
 
-const plans: PlanCard[] = [
-  { name: "Annual Unlimited", detail: "Unlimited access across every location", price: "₹18,000", cadence: "/ year", members: 486, revenue: "₹87.5L", growth: "+12.4%", state: "Active", tone: "purple" },
-  { name: "Strength Pro", detail: "Gym access with four coached sessions", price: "₹3,499", cadence: "/ month", members: 352, revenue: "₹12.3L", growth: "+8.1%", state: "Active", tone: "blue" },
-  { name: "Monthly Flex", detail: "Flexible monthly access, cancel anytime", price: "₹2,499", cadence: "/ month", members: 318, revenue: "₹7.9L", growth: "+3.6%", state: "Active", tone: "green" },
-  { name: "Starter Pass", detail: "Eight gym visits every month", price: "₹999", cadence: "/ month", members: 128, revenue: "₹1.3L", growth: "−1.2%", state: "Archived", tone: "amber" },
-];
+function planToCard(plan: PlanOption): PlanCard {
+  return {
+    id: plan.id,
+    code: plan.code,
+    name: plan.name,
+    detail: `${plan.type === "GT" ? "Gym Training" : "Personal Training"} · ${plan.code}`,
+    price: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(plan.standardMonthlyFee)),
+    cadence: "/ month",
+    members: 0,
+    revenue: "₹0",
+    growth: "—",
+    state: plan.isActive ? "Active" : "Archived",
+    tone: plan.type === "GT" ? "purple" : "blue",
+  };
+}
 
 const trainers = [
   { name: "Arjun Malhotra", initials: "AM", focus: "Strength & conditioning", clients: 42, sessions: 28, rating: "4.9", load: 82, state: "Busy", next: "10:30 AM", color: "violet" },
@@ -103,20 +126,11 @@ function AddPlanModal({ close, onCreated }: { close: () => void; onCreated: (pla
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, name, type, standardMonthlyFee: monthlyFee, isActive }),
       });
-      const data = await response.json() as { error?: string };
+      const data = await response.json() as { error?: string; id?: string; code?: string; name?: string; type?: "GT" | "PT"; standardMonthlyFee?: string | number; isActive?: boolean };
       if (!response.ok) throw new Error(data.error ?? "Could not create the plan.");
 
-      onCreated({
-        name: name.trim(),
-        detail: `${type === "GT" ? "Gym Training" : "Personal Training"} · ${code.trim()}`,
-        price: new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(monthlyFee)),
-        cadence: "/ month",
-        members: 0,
-        revenue: "₹0",
-        growth: "—",
-        state: isActive ? "Active" : "Archived",
-        tone: type === "GT" ? "purple" : "blue",
-      });
+      if (!data.id || !data.code || !data.name || !data.type || data.standardMonthlyFee === undefined) throw new Error("The created plan response was incomplete.");
+      onCreated(planToCard({ id: data.id, code: data.code, name: data.name, type: data.type, standardMonthlyFee: data.standardMonthlyFee, isActive: data.isActive ?? isActive }));
       close();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not create the plan.");
@@ -129,7 +143,6 @@ function AddPlanModal({ close, onCreated }: { close: () => void; onCreated: (pla
 }
 
 type MemberOption = { id: string; fullName: string };
-type PlanOption = { id: string; code: string; name: string; type: "GT" | "PT"; standardMonthlyFee: string | number; isActive: boolean };
 
 function dateInputValue(date: Date) { return date.toISOString().slice(0, 10); }
 
@@ -173,16 +186,27 @@ function AssignPlanModal({ close, onAssigned }: { close: () => void; onAssigned:
     finally { setSubmitting(false); }
   }
 
-  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="assign-plan-title" onMouseDown={event => event.currentTarget === event.target && close()}><form className="modal" onSubmit={submit}><div className="modal-header"><div><h2 id="assign-plan-title">Assign plan</h2><p>Give a member an active membership plan.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close" disabled={submitting}><X size={18} /></button></div><label>Member<select required autoFocus value={memberId} onChange={event => setMemberId(event.target.value)} disabled={loading || submitting}><option value="" disabled>Select a member</option>{members.map(member => <option key={member.id} value={member.id}>{member.fullName}</option>)}</select></label><label>Plan<select required value={planId} onChange={event => selectPlan(event.target.value)} disabled={loading || submitting}><option value="" disabled>{availablePlans.length ? "Select an active plan" : "No active plans available"}</option>{availablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name} ({plan.code}) · ₹{plan.standardMonthlyFee}</option>)}</select></label><div className="form-row"><label>Starts on<input required type="date" value={startsOn} onChange={event => setStartsOn(event.target.value)} disabled={submitting} /></label><label>Ends on<input required type="date" value={endsOn} onChange={event => setEndsOn(event.target.value)} disabled={submitting} /></label></div><label>Agreed fee<input required type="number" min="0" step="0.01" value={agreedFee} onChange={event => setAgreedFee(event.target.value)} placeholder="₹ 0" disabled={submitting} /></label>{error && <p role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={submitting}>Cancel</button><button className="button primary" type="submit" disabled={loading || submitting || !memberId || !planId}>{submitting ? "Assigning…" : "Assign plan"}</button></div></form></div>;
+  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="assign-plan-title" onMouseDown={event => event.currentTarget === event.target && close()}><form className="modal" onSubmit={submit}><div className="modal-header"><div><h2 id="assign-plan-title">Assign plan</h2><p>Give a member an active membership plan.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close" disabled={submitting}><X size={18} /></button></div>{loading && <div className="modal-loading" role="status"><LoaderCircle className="plan-spinner" size={16} /> Loading members and plans…</div>}<label>Member<select required autoFocus value={memberId} onChange={event => setMemberId(event.target.value)} disabled={loading || submitting}><option value="" disabled>Select a member</option>{members.map(member => <option key={member.id} value={member.id}>{member.fullName}</option>)}</select></label><label>Plan<select required value={planId} onChange={event => selectPlan(event.target.value)} disabled={loading || submitting}><option value="" disabled>{availablePlans.length ? "Select an active plan" : "No active plans available"}</option>{availablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name} ({plan.code}) · ₹{plan.standardMonthlyFee}</option>)}</select></label><div className="form-row"><label>Starts on<input required type="date" value={startsOn} onChange={event => setStartsOn(event.target.value)} disabled={submitting} /></label><label>Ends on<input required type="date" value={endsOn} onChange={event => setEndsOn(event.target.value)} disabled={submitting} /></label></div><label>Agreed fee<input required type="number" min="0" step="0.01" value={agreedFee} onChange={event => setAgreedFee(event.target.value)} placeholder="₹ 0" disabled={submitting} /></label>{error && <p role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={submitting}>Cancel</button><button className="button primary" type="submit" disabled={loading || submitting || !memberId || !planId}>{submitting ? "Assigning…" : "Assign plan"}</button></div></form></div>;
 }
 
 function Memberships({ notify }: { notify: Notify }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Active" | "Archived">("All");
-  const [items, setItems] = useState(plans);
+  const [items, setItems] = useState<PlanCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [isAddPlanOpen, setIsAddPlanOpen] = useState(false);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
   const visible = useMemo(() => items.filter((plan) => (filter === "All" || plan.state === filter) && `${plan.name} ${plan.detail}`.toLowerCase().includes(query.toLowerCase())), [filter, items, query]);
+  useEffect(() => { void (async () => {
+    try {
+      const response = await fetch("/api/plans");
+      const data = await response.json() as { plans?: PlanOption[]; error?: string };
+      if (!response.ok || !data.plans) throw new Error(data.error ?? "Could not load membership plans.");
+      setItems(data.plans.map(planToCard));
+    } catch (reason) { setLoadError(reason instanceof Error ? reason.message : "Could not load membership plans."); }
+    finally { setLoading(false); }
+  })(); }, []);
   return <>
     <PageHeader eyebrow="MEMBERSHIP MANAGEMENT" title="Memberships" copy="Create plans, track adoption, and stay ahead of upcoming renewals." action="Create plan" onAction={() => setIsAddPlanOpen(true)} secondaryAction="Assign plan" onSecondaryAction={() => setIsAssignPlanOpen(true)} />
     <SummaryGrid>
@@ -192,12 +216,12 @@ function Memberships({ notify }: { notify: Notify }) {
       <SummaryCard icon={TrendingUp} tone="amber" label="Average plan value" value="₹2,642" detail="+6.2% over 90 days" />
     </SummaryGrid>
     <Toolbar query={query} setQuery={setQuery} placeholder="Search membership plans"><Tab active={filter === "All"} onClick={() => setFilter("All")}>All</Tab><Tab active={filter === "Active"} onClick={() => setFilter("Active")}>Active</Tab><Tab active={filter === "Archived"} onClick={() => setFilter("Archived")}>Archived</Tab></Toolbar>
-    <section className="plan-grid">{visible.map((plan) => <article className="panel plan-card" key={plan.name}>
+    <section className="plan-grid">{loading ? <LoadingPlans /> : loadError ? <Empty icon={CreditCard} label={loadError} /> : visible.map((plan) => <article className="panel plan-card" key={plan.id}>
       <div className="plan-top"><span className={`managed-glyph ${plan.tone}`}><CreditCard size={19} /></span><span className={`managed-status ${plan.state === "Active" ? "active" : "paused"}`}>{plan.state}</span><button className="icon-button small" aria-label={`${plan.name} options`} onClick={() => notify(`${plan.name} options opened`)}><MoreHorizontal size={17} /></button></div>
       <h2>{plan.name}</h2><p>{plan.detail}</p><div className="plan-price"><strong>{plan.price}</strong><span>{plan.cadence}</span></div>
-      <div className="plan-data"><div><small>Members</small><strong>{plan.members}</strong></div><div><small>Revenue</small><strong>{plan.revenue}</strong></div><div><small>Growth</small><strong className={plan.growth.startsWith("+") ? "good" : "bad"}>{plan.growth}</strong></div></div>
+      <div className="plan-data"><div><small>Members</small><strong>{plan.members}</strong></div><div><small>Revenue</small><strong>{plan.revenue}</strong></div></div>
       <button className="managed-row-action" onClick={() => notify(`${plan.name} opened for editing`)}>Manage plan <ChevronRight size={15} /></button>
-    </article>)}{visible.length === 0 && <Empty icon={CreditCard} label="No matching plans" />}</section>
+    </article>)}{!loading && !loadError && visible.length === 0 && <Empty icon={CreditCard} label="No matching plans" />}</section>
     <Renewals notify={notify} />
     {isAddPlanOpen && <AddPlanModal close={() => setIsAddPlanOpen(false)} onCreated={plan => { setItems(current => [plan, ...current]); notify("Membership plan created successfully"); }} />}
     {isAssignPlanOpen && <AssignPlanModal close={() => setIsAssignPlanOpen(false)} onAssigned={() => notify("Plan assigned successfully")} />}
@@ -271,23 +295,154 @@ function Empty({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return <div className="panel managed-empty"><Icon size={23} /><strong>{label}</strong><span>Try adjusting your search or filter.</span></div>;
 }
 
-function Overview({ notify }: { notify: Notify }) {
-  const activity = [["Kabir Singh joined", "Annual Unlimited", "4m"], ["Neha Sharma checked in", "Morning session", "12m"], ["Payment received", "Rahul Jain · ₹2,499", "28m"], ["Win-back message delivered", "12 members reached", "1h"]];
-  const priorities: { title: string; detail: string; icon: LucideIcon; tone: string }[] = [
-    { title: "32 renewals due soon", detail: "Reach out before memberships expire", icon: CalendarDays, tone: "amber" },
-    { title: "18 members need attention", detail: "Inactive for more than 21 days", icon: Users, tone: "purple" },
-    { title: "7 failed payments", detail: "₹18,493 available to recover", icon: CreditCard, tone: "red" },
-  ];
+function LoadingPlans() {
+  return <div className="panel managed-empty" role="status" aria-live="polite"><LoaderCircle className="plan-spinner" size={24} /><strong>Loading plans</strong><span>Fetching plans from your gym.</span></div>;
+}
+
+type OverviewWindow = 7 | 14 | 30;
+type OverviewData = {
+  generatedAt: string;
+  today: string;
+  windowDays: OverviewWindow;
+  user: { firstName: string };
+  gym: { name: string; timezone: string };
+  summary: {
+    activeMemberships: number;
+    totalMembers: number;
+    expiringCount: number;
+    expiringValue: string;
+    totalCollected: string;
+    totalCollectedChange: string | null;
+    outstandingAmount: string;
+    overdueAmount: string;
+    overdueMembers: number;
+    collectionRate: string;
+  };
+  expiringMemberships: {
+    id: string;
+    member: { id: string; fullName: string };
+    planName: string;
+    endsOn: string;
+    agreedFee: string;
+    outstandingAmount: string;
+    overdueAmount: string;
+  }[];
+  recentPayments: {
+    id: string;
+    amount: string;
+    paidOn: string;
+    status: "SUCCEEDED" | "VOIDED" | "REFUNDED";
+    member: { id: string; fullName: string };
+    membership: { id: string; planName: string } | null;
+    paymentMode: string;
+  }[];
+};
+
+const overviewMoney = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const overviewDate = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" });
+
+function memberInitials(name: string) {
+  return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function daysBetween(startKey: string, endKey: string) {
+  return Math.round((Date.parse(`${endKey}T00:00:00Z`) - Date.parse(`${startKey}T00:00:00Z`)) / 86_400_000);
+}
+
+function expiryLabel(today: string, endsOn: string) {
+  const remaining = daysBetween(today, endsOn);
+  if (remaining === 0) return "Today";
+  if (remaining === 1) return "Tomorrow";
+  return `In ${remaining} days`;
+}
+
+function paymentStatus(status: OverviewData["recentPayments"][number]["status"]) {
+  if (status === "SUCCEEDED") return "Paid";
+  return status === "REFUNDED" ? "Refunded" : "Voided";
+}
+
+function Overview() {
+  const [days, setDays] = useState<OverviewWindow>(7);
+  const [data, setData] = useState<OverviewData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadOverview = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/overview?days=${days}`, { signal });
+      const result = await response.json() as OverviewData | { error?: string };
+      if (!response.ok || !("summary" in result)) throw new Error("error" in result ? result.error ?? "Could not load the overview." : "Could not load the overview.");
+      setData(result);
+    } catch (reason) {
+      if (reason instanceof DOMException && reason.name === "AbortError") return;
+      setError(reason instanceof Error ? reason.message : "Could not load the overview.");
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => void loadOverview(controller.signal), 0);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [loadOverview]);
+
+  const summary = data?.summary;
+  const collectedChange = summary?.totalCollectedChange === null || summary?.totalCollectedChange === undefined
+    ? "No prior-month comparison"
+    : `${Number(summary.totalCollectedChange) >= 0 ? "+" : ""}${summary.totalCollectedChange}% from last month`;
+
   return <>
-    <PageHeader eyebrow="WORKSPACE OVERVIEW" title="Good evening, Priya" copy="Here’s what’s happening at Pulse Fitness today." action="Add member" icon={UserPlus} onAction={() => notify("New member form opened")} />
-    <SummaryGrid><SummaryCard icon={Users} tone="purple" label="Active members" value="1,284" detail="+4.8% from last month" /><SummaryCard icon={WalletCards} tone="green" label="Monthly revenue" value="₹12.8L" detail="₹97K above last month" /><SummaryCard icon={TrendingUp} tone="blue" label="Member retention" value="88.4%" detail="+2.1% from last month" /><SummaryCard icon={Activity} tone="amber" label="Visits today" value="386" detail="42 more than last Saturday" /></SummaryGrid>
-    <section className="report-layout overview-layout"><article className="panel report-chart"><div className="report-head"><div><small>MEMBERSHIP HEALTH</small><h2>88.4%</h2><p><strong><ArrowUpRight size={13} />2.1%</strong> compared with last month</p></div><button className="button secondary" onClick={() => notify("Membership report opened")}>View report <ChevronRight size={14} /></button></div><div className="report-tabs"><Tab active onClick={() => undefined}>Retention</Tab><Tab active={false} onClick={() => notify("Churn trend selected")}>Churn</Tab><Tab active={false} onClick={() => notify("Renewals trend selected")}>Renewals</Tab></div><div className="report-bars">{[48, 54, 52, 63, 68, 72, 78, 75, 84, 88, 92, 96].map((height, index) => <div key={index}><span><i style={{ height: `${height}%` }} /></span><small>{["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"][index]}</small></div>)}</div></article><article className="panel run-card"><div className="managed-card-head"><div><h2>Live activity</h2><p>Across all locations</p></div><span className="managed-live"><i />Live</span></div><div className="run-list">{activity.map(([title, detail, time], index) => <div key={title}><i className={index === 3 ? "error" : "ok"} /><span><strong>{title}</strong><small>{detail}</small></span><time>{time}</time></div>)}</div><button className="managed-row-action" onClick={() => notify("Full activity timeline opened")}>View all activity <ChevronRight size={14} /></button></article></section>
-    <section className="saved-section"><div className="section-title"><div><h2>Today’s priorities</h2><p>Actions with the biggest impact right now.</p></div></div><div className="saved-grid">{priorities.map(({ title, detail, icon: ActionIcon, tone }) => <button className="panel saved-report overview-priority" key={title} onClick={() => notify(`${title} opened`)}><span className={`managed-glyph ${tone}`}><ActionIcon size={19} /></span><span><strong>{title}</strong><small>{detail}</small></span><ChevronRight size={16} /></button>)}</div></section>
+    <div className="page-heading managed-heading overview-heading"><div><p className="managed-breadcrumb">Workspace <ChevronRight size={12} /> Overview</p><h1>{data ? `Welcome back, ${data.user.firstName}` : "Welcome back"}</h1><p>{data ? `Here’s what needs attention at ${data.gym.name} today.` : "Your membership and collections workspace."}</p></div><div className="heading-actions"><Button variant="outline" size="lg" asChild><Link href="/payments?record=1"><IndianRupee />Record payment</Link></Button><Button size="lg" asChild><Link href="/members?add=1"><UserPlus />Add member</Link></Button></div></div>
+
+    {error && <Card className="overview-error" role="alert"><AlertCircle /><div><strong>Could not load the overview</strong><span>{error}</span></div><Button variant="outline" size="sm" onClick={() => void loadOverview()}><RefreshCw />Try again</Button></Card>}
+
+    <section className="overview-stats" aria-label="Business summary">
+      <Card className="overview-stat"><span className="managed-stat-icon purple"><Users /></span><div><small>Active memberships</small><strong>{loading && !data ? "—" : summary?.activeMemberships ?? 0}</strong><em>{summary ? `${summary.totalMembers} total members` : "Loading member totals…"}</em></div></Card>
+      <Card className="overview-stat"><span className="managed-stat-icon amber"><CalendarDays /></span><div><small>Expiring in {days} days</small><strong>{loading && !data ? "—" : summary?.expiringCount ?? 0}</strong><em>{summary ? `${overviewMoney.format(Number(summary.expiringValue))} membership value` : "Loading upcoming expiries…"}</em></div></Card>
+      <Card className="overview-stat"><span className="managed-stat-icon green"><WalletCards /></span><div><small>Collected this month</small><strong>{summary ? overviewMoney.format(Number(summary.totalCollected)) : "—"}</strong><em className={Number(summary?.totalCollectedChange ?? 0) < 0 ? "bad" : "good"}>{summary ? collectedChange : "Loading collections…"}</em></div></Card>
+      <Card className="overview-stat"><span className="managed-stat-icon blue"><ReceiptText /></span><div><small>Outstanding dues</small><strong>{summary ? overviewMoney.format(Number(summary.outstandingAmount)) : "—"}</strong><em>{summary ? `${summary.overdueMembers} overdue ${summary.overdueMembers === 1 ? "member" : "members"}` : "Loading outstanding dues…"}</em></div></Card>
+    </section>
+
+    <section className="overview-action-grid">
+      <Card className="overview-expiring-card">
+        <CardHeader className="overview-section-head"><div><CardTitle>Memberships expiring soon</CardTitle><CardDescription>Active memberships ending in the selected window.</CardDescription></div><div className="overview-window" aria-label="Expiry window">{([7, 14, 30] as OverviewWindow[]).map((window) => <Button key={window} size="sm" variant={days === window ? "secondary" : "ghost"} aria-pressed={days === window} onClick={() => setDays(window)}>{window} days</Button>)}</div></CardHeader>
+        <CardContent className="overview-expiring-content">
+          <div className="overview-expiry-table-head" aria-hidden><span>Member</span><span>Expires</span><span>Payment position</span><span /></div>
+          {loading && !data ? <div className="overview-loading"><LoaderCircle /><span>Loading upcoming expiries…</span></div> : data?.expiringMemberships.length ? <div className="overview-expiry-list">{data.expiringMemberships.slice(0, 5).map((membership) => {
+            const overdue = Number(membership.overdueAmount) > 0;
+            const outstanding = Number(membership.outstandingAmount) > 0;
+            return <div className="overview-expiry-row" key={membership.id}><div className="overview-person"><Avatar size="lg"><AvatarFallback>{memberInitials(membership.member.fullName)}</AvatarFallback></Avatar><span><strong>{membership.member.fullName}</strong><small>{membership.planName}</small></span></div><div className="overview-expiry-date"><strong>{expiryLabel(data.today, membership.endsOn)}</strong><small>{overviewDate.format(new Date(`${membership.endsOn}T00:00:00Z`))}</small></div><div>{overdue ? <Badge variant="destructive">{overviewMoney.format(Number(membership.overdueAmount))} overdue</Badge> : outstanding ? <Badge variant="outline">{overviewMoney.format(Number(membership.outstandingAmount))} outstanding</Badge> : <Badge variant="secondary"><Check />Paid</Badge>}</div><Button variant="ghost" size="sm" asChild><Link href={`/members?member=${membership.member.id}`}>View member<ChevronRight /></Link></Button></div>;
+          })}</div> : <div className="overview-empty"><span className="managed-glyph green"><Check /></span><strong>No memberships expire in the next {days} days</strong><p>You’re all caught up. Try a wider date range to look further ahead.</p></div>}
+        </CardContent>
+        <div className="overview-card-footer"><span>{summary ? `${summary.expiringCount} upcoming ${summary.expiringCount === 1 ? "expiry" : "expiries"}` : "Upcoming expiries"}</span><Button variant="link" size="sm" asChild><Link href="/members">View all members<ArrowRight /></Link></Button></div>
+      </Card>
+
+      <Card className="overview-collection-card">
+        <CardHeader><CardTitle>Collection health</CardTitle><CardDescription>This month against open membership dues.</CardDescription></CardHeader>
+        <CardContent>
+          <div className="overview-rate"><div><strong>{summary ? `${summary.collectionRate}%` : "—"}</strong><span>Collection rate</span></div><span className="overview-rate-icon"><TrendingUp /></span></div>
+          <div className="overview-progress" aria-label={`${summary?.collectionRate ?? 0}% collection rate`}><i style={{ width: `${Math.min(Number(summary?.collectionRate ?? 0), 100)}%` }} /></div>
+          <dl className="overview-collection-list"><div><dt>Collected this month</dt><dd>{summary ? overviewMoney.format(Number(summary.totalCollected)) : "—"}</dd></div><div><dt>Outstanding</dt><dd>{summary ? overviewMoney.format(Number(summary.outstandingAmount)) : "—"}</dd></div><div><dt>Overdue now</dt><dd className={Number(summary?.overdueAmount ?? 0) > 0 ? "bad" : ""}>{summary ? overviewMoney.format(Number(summary.overdueAmount)) : "—"}</dd></div><div><dt>Members overdue</dt><dd>{summary?.overdueMembers ?? "—"}</dd></div></dl>
+        </CardContent>
+        <div className="overview-card-footer"><span>Updated with member balances</span><Button variant="link" size="sm" asChild><Link href="/payments">View payments<ArrowRight /></Link></Button></div>
+      </Card>
+    </section>
+
+    <Card className="overview-payments-card">
+      <CardHeader className="overview-section-head"><div><CardTitle>Recent payments</CardTitle><CardDescription>The latest member transactions across payment methods.</CardDescription></div><Button variant="outline" size="sm" asChild><Link href="/payments">View all payments<ArrowRight /></Link></Button></CardHeader>
+      <CardContent className="overview-payment-list">{loading && !data ? <div className="overview-loading"><LoaderCircle /><span>Loading recent payments…</span></div> : data?.recentPayments.length ? data.recentPayments.map((payment) => <div className="overview-payment-row" key={payment.id}><div className="overview-person"><Avatar><AvatarFallback>{memberInitials(payment.member.fullName)}</AvatarFallback></Avatar><span><strong>{payment.member.fullName}</strong><small>{payment.membership?.planName ?? "Unallocated payment"}</small></span></div><span className="overview-payment-method">{payment.paymentMode}</span><span className="overview-payment-date">{overviewDate.format(new Date(`${payment.paidOn}T00:00:00Z`))}</span><strong className="overview-payment-amount">{overviewMoney.format(Number(payment.amount))}</strong><Badge variant={payment.status === "SUCCEEDED" ? "secondary" : payment.status === "REFUNDED" ? "outline" : "destructive"}>{paymentStatus(payment.status)}</Badge></div>) : <div className="overview-empty compact"><span className="managed-glyph purple"><IndianRupee /></span><strong>No payments recorded yet</strong><p>New member payments will appear here.</p></div>}</CardContent>
+    </Card>
   </>;
 }
 
 export function ManagedPage({ view, notify }: { view: Exclude<ManagedView, "Members">; notify: Notify }) {
-  if (view === "Overview") return <Overview notify={notify} />;
+  if (view === "Overview") return <Overview />;
   if (view === "Memberships") return <Memberships notify={notify} />;
   if (view === "Trainers") return <Trainers notify={notify} />;
   if (view === "Reports") return <Reports notify={notify} />;
