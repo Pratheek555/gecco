@@ -31,6 +31,19 @@ function parseMonthlyFee(value: unknown) {
   return null;
 }
 
+export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const plans = await prisma.plan.findMany({
+    where: { gymId: session.activeGym.id },
+    orderBy: { name: "asc" },
+    select: { id: true, code: true, name: true, type: true, standardMonthlyFee: true, isActive: true },
+  });
+
+  return NextResponse.json({ plans });
+}
+
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
