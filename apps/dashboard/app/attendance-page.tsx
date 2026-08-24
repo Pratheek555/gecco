@@ -5,13 +5,14 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity, ArrowDownRight, ArrowUpRight, BarChart3, Bell, CalendarDays,
   Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clock3,
-  CreditCard, Download, Dumbbell, Filter, HelpCircle, Home, LayoutDashboard,
+  CreditCard, Download, Dumbbell, Filter, HelpCircle, LayoutDashboard,
   LogIn, LogOut, Menu, MessageCircle, Moon, MoreHorizontal, Plus, ScanLine,
   Search, Settings, ShieldCheck, Sparkles, Sun, Timer, TrendingUp,
   UserRoundCheck, Users, WalletCards, X, Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import DashboardSidebar from "./dashboard-sidebar";
+import MobileNavigation from "./mobile-navigation";
 
 type VisitStatus = "In gym" | "Checked out";
 type VisitFilter = "All visits" | VisitStatus;
@@ -123,7 +124,7 @@ export default function AttendancePage() {
       </section>
       <footer className="dashboard-footer"><span>Attendance synced just now</span><span><ShieldCheck size={14} /> Your data is securely encrypted</span></footer>
     </main></div>
-    <nav className="mobile-tabs" aria-label="Mobile navigation"><Link href="/"><Home size={19} /><span>Home</span></Link><Link href="/members"><Users size={19} /><span>Members</span></Link><button className="mobile-add" onClick={() => setShowModal(true)}><Plus size={21} /></button><Link className="active" href="/attendance"><Activity size={19} /><span>Visits</span></Link><button><Settings size={19} /><span>Settings</span></button></nav>
+    <MobileNavigation onNotify={notify} onAdd={() => setShowModal(true)} />
     {showModal && <CheckInModal close={() => setShowModal(false)} checkIn={checkIn} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}
   </div>;
 }
