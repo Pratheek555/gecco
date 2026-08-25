@@ -1,18 +1,20 @@
 "use client";
 
 import {
-  ArrowDownLeft, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarDays,
-  Check, ChevronDown, CircleHelp, Download, FileText, Filter, HelpCircle,
+  ArrowDownRight, ArrowRight, ArrowUpRight,
+  Check, CircleHelp, Download, FileText, Filter,
   IndianRupee, LoaderCircle, Menu, Moon, MoreHorizontal, Plus, ReceiptText, RefreshCw, Search,
   ShieldCheck, Sun, TrendingUp, X, Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ElementType } from "react";
+import type { DateRange } from "react-day-picker";
 import DashboardSidebar from "./dashboard-sidebar";
+import { DateRangePicker } from "@/components/date-range-picker";
 import MobileNavigation from "./mobile-navigation";
+import ProfileMenu from "./profile-menu";
 
 type PaymentStatus = "Paid" | "Refunded" | "Voided";
 type PaymentTab = "All" | PaymentStatus;
-type Period = "This month" | "Last month" | "Last 3 months";
 
 type PaymentRecord = {
   id: string;
@@ -30,11 +32,13 @@ type PaymentAnalytics = {
   paymentMethods: { id: string; name: string; amount: string; count: number; share: number }[];
 };
 
+type CurrentSession = { user: { fullName: string }; activeGym: { role: string } };
+
 const paymentColors = ["violet", "blue", "amber", "pink", "green"];
 const initials = (fullName: string) => fullName.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
 const paymentStatusLabels = { SUCCEEDED: "Paid", REFUNDED: "Refunded", VOIDED: "Voided" } as const satisfies Record<PaymentRecord["status"], PaymentStatus>;
 const displayPaymentStatus = (status: PaymentRecord["status"]): PaymentStatus => paymentStatusLabels[status];
-const analyticsPeriods: Record<Period, string> = { "This month": "THIS_MONTH", "Last month": "LAST_MONTH", "Last 3 months": "LAST_3_MONTHS" };
+const dateKey = (date: Date) => date.toISOString().slice(0, 10);
 
 const money = (amount: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
 
@@ -47,7 +51,16 @@ function ThemeToggle() {
 }
 
 function Header({ onMenu, notify }: { onMenu: () => void; notify: (message: string) => void }) {
-  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div><button className="search-box" onClick={() => document.getElementById("payment-search")?.focus()}><Search size={16} /><span>Search members, payments...</span><kbd>⌘ K</kbd></button></div><div className="topbar-actions"><button className="icon-button help-button" onClick={() => notify("Help centre opened")} aria-label="Help"><HelpCircle size={18} /></button><ThemeToggle /><button className="icon-button notification-button" onClick={() => notify("You have 3 new notifications")} aria-label="Notifications"><Bell size={18} /><i /></button><div className="topbar-divider" /><button className="profile" onClick={() => notify("Profile menu opened")}><span className="avatar avatar-main">PK</span><span className="profile-copy"><strong>Priya Khanna</strong><small>Owner</small></span><ChevronDown size={15} /></button></div></header>;
+  const [session, setSession] = useState<CurrentSession | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/session").then(response => response.ok ? response.json() as Promise<CurrentSession> : null).then(data => { if (!cancelled && data) setSession(data); }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
+  const fullName = session?.user.fullName ?? "Account";
+  const initials = fullName.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
+  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div></div><div className="topbar-actions"><ThemeToggle /><div className="topbar-divider" /><ProfileMenu name={fullName} initials={initials} role={session?.activeGym.role ?? ""} onNotify={notify} /></div></header>;
 }
 
 function Stat({ icon: Icon, tone, label, value, detail, change }: { icon: ElementType; tone: string; label: string; value: string; detail: string; change?: string }) {
@@ -165,12 +178,14 @@ function RecordModal({ close, notify, onRecorded }: { close: () => void; notify:
 }
 
 export default function PaymentsPage() {
-  const [period, setPeriod] = useState<Period>("This month"), [tab, setTab] = useState<PaymentTab>("All"), [query, setQuery] = useState(""), [mobileNav, setMobileNav] = useState(false), [modal, setModal] = useState(false), [toast, setToast] = useState(""), [payments, setPayments] = useState<PaymentRecord[]>([]), [paymentsError, setPaymentsError] = useState(""), [paymentsLoading, setPaymentsLoading] = useState(true), [analytics, setAnalytics] = useState<PaymentAnalytics | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(() => { const to = new Date(); return { from: new Date(to.getFullYear(), to.getMonth(), 1), to }; }), [tab, setTab] = useState<PaymentTab>("All"), [query, setQuery] = useState(""), [mobileNav, setMobileNav] = useState(false), [modal, setModal] = useState(false), [toast, setToast] = useState(""), [payments, setPayments] = useState<PaymentRecord[]>([]), [paymentsError, setPaymentsError] = useState(""), [paymentsLoading, setPaymentsLoading] = useState(true), [analytics, setAnalytics] = useState<PaymentAnalytics | null>(null);
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2600); };
   const loadPayments = useCallback(async () => {
     setPaymentsLoading(true);
     try {
-      const response = await fetch("/api/payment/payments?limit=50");
+      const start = dateKey(dateRange.from ?? new Date());
+      const end = dateKey(dateRange.to ?? dateRange.from ?? new Date());
+      const response = await fetch(`/api/payment/payments?start=${start}&end=${end}&limit=50`);
       const data = await response.json() as { payments?: PaymentRecord[]; error?: string };
       if (!response.ok || !data.payments) throw new Error(data.error ?? "Could not load payments.");
 
@@ -181,13 +196,15 @@ export default function PaymentsPage() {
     } finally {
       setPaymentsLoading(false);
     }
-  }, []);
+  }, [dateRange]);
   const loadAnalytics = useCallback(async () => {
-    const response = await fetch(`/api/payment/analytics?period=${analyticsPeriods[period]}`);
+    const start = dateKey(dateRange.from ?? new Date());
+    const end = dateKey(dateRange.to ?? dateRange.from ?? new Date());
+    const response = await fetch(`/api/payment/analytics?start=${start}&end=${end}`);
     const data = await response.json() as PaymentAnalytics | { error?: string };
     if (!response.ok || !("summary" in data)) throw new Error("error" in data ? data.error : "Could not load payment analytics.");
     setAnalytics(data);
-  }, [period]);
+  }, [dateRange]);
   useEffect(() => {
     const timeout = window.setTimeout(() => { void loadPayments(); }, 0);
     return () => window.clearTimeout(timeout);
@@ -214,10 +231,10 @@ export default function PaymentsPage() {
   function exportPayments() { const rows = payments.map(payment => [payment.id, payment.member.fullName, payment.membership?.planName ?? "", payment.paidOn, payment.paymentMode.name, payment.amount, displayPaymentStatus(payment.status)].join(",")); const url = URL.createObjectURL(new Blob([["Payment ID,Member,Plan,Date,Method,Amount,Status", ...rows].join("\n")], { type: "text/csv" })); const link = document.createElement("a"); link.href = url; link.download = "gymwise-payments.csv"; link.click(); URL.revokeObjectURL(url); notify("Payments exported successfully"); }
 
   return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} /><div className="app-content"><Header onMenu={() => setMobileNav(true)} notify={notify} /><main className="dashboard payments-dashboard">
-    <div className="page-heading payments-heading"><div><h1>Payments</h1><p>Track collections, settlements, and member transactions.</p></div><div className="heading-actions"><div className="period-select"><CalendarDays size={16} /><select value={period} onChange={event => setPeriod(event.target.value as Period)} aria-label="Payment period"><option>This month</option><option>Last month</option><option>Last 3 months</option></select><ChevronDown size={14} /></div><button className="button secondary export-button" onClick={exportPayments}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModal(true)}><Plus size={17} /> Record payment</button></div></div>
+    <div className="page-heading payments-heading"><div><h1>Payments</h1><p>Track collections, settlements, and member transactions.</p></div><div className="heading-actions"><DateRangePicker value={dateRange} onChange={range => setDateRange(range ?? dateRange)} /><button className="button secondary export-button" onClick={exportPayments}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModal(true)}><Plus size={17} /> Record payment</button></div></div>
     <section className="kpi-grid" aria-label="Payment summary"><Stat icon={IndianRupee} tone="purple" label="Total collected" value={summary ? money(Number(summary.totalCollected)) : "—"} change={summary?.totalCollectedChange ? `${Number(summary.totalCollectedChange) >= 0 ? "+" : ""}${summary.totalCollectedChange}%` : undefined} detail={summary ? `Across ${summary.successfulPaymentCount} successful payments` : "Loading collections…"} /><Stat icon={ReceiptText} tone="blue" label="Pending amount" value={summary ? money(Number(summary.outstandingAmount)) : "—"} detail="Open membership dues" /><Stat icon={RefreshCw} tone="amber" label="Voided payments" value={summary ? money(Number(summary.voidedAmount)) : "—"} detail={summary ? `${summary.voidedPaymentCount} voided payments this period` : "Loading payment status…"} /><Stat icon={TrendingUp} tone="green" label="Collection rate" value={summary ? `${summary.collectionRate}%` : "—"} detail="Collected against outstanding dues" /></section>
-    <section className="payments-overview-grid"><article className="panel revenue-panel"><div className="payment-card-header"><div><h2>Collection overview</h2><p>Revenue received across all payment methods</p></div><div className="revenue-summary"><div><small>Total collected</small><strong>{summary ? money(Number(summary.totalCollected)) : "—"}</strong></div>{summary?.totalCollectedChange && <span><ArrowUpRight size={13} /> {summary.totalCollectedChange}%</span>}</div></div><RevenueChart chart={analytics?.chart ?? null} /></article><div className="payments-side"><article className="settlement-card"><div className="settlement-top"><span><ArrowDownLeft size={18} /></span><div><small>Settlement data</small><strong>Not available</strong></div><em>Not configured</em></div><div className="settlement-meta"><div><span>Expected by</span><strong>—</strong></div><div><span>Bank account</span><strong>—</strong></div></div><button onClick={() => notify("Settlement data is not configured")}>View settlement details <ArrowRight size={14} /></button></article><article className="panel methods-panel"><div className="payment-card-header compact"><div><h2>Payment methods</h2><p>Share of collections this period</p></div><button className="icon-button small" onClick={() => void loadAnalytics()}><MoreHorizontal size={18} /></button></div><div className="method-content"><div className="donut"><div><strong>{summary?.successfulPaymentCount ?? "—"}</strong><span>payments</span></div></div><div className="method-list">{(analytics?.paymentMethods ?? []).map((method, index) => <div className="method-row" key={method.id}><i className={paymentColors[index % paymentColors.length]} /><span>{method.name}</span><strong>{method.share}%</strong><small>{money(Number(method.amount))}</small></div>)}</div></div></article></div></section>
-    <article className="panel transactions-panel"><div className="transactions-header"><div><h2>Recent transactions</h2><p>Track and manage every member payment</p></div><button className="text-button" onClick={() => void loadPayments()} disabled={paymentsLoading}>Refresh <ArrowRight size={14} /></button></div><div className="transaction-toolbar"><div className="payment-tabs">{(["All", "Paid", "Refunded", "Voided"] as PaymentTab[]).map(item => <button key={item} onClick={() => setTab(item)} className={tab === item ? "selected" : ""}>{item}<span>{counts[item]}</span></button>)}</div><div className="transaction-tools"><label className="transaction-search"><Search size={15} /><input id="payment-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search payments" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button>}</label><button className="icon-button table-filter" onClick={() => notify("Advanced filters opened")}><Filter size={16} /></button></div></div><div className="payments-table-wrap"><table className="payments-table"><thead><tr><th>Member</th><th>Payment ID</th><th>Date</th><th>Method</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>{paymentsLoading ? <tr><td colSpan={7}><div className="payment-empty"><LoaderCircle size={25} className="animate-spin" /><strong>Loading payments</strong><span>Fetching recent transactions…</span></div></td></tr> : <>{visible.map((payment, index) => { const status = displayPaymentStatus(payment.status); return <tr key={payment.id} onClick={() => notify(`${payment.id} details opened`)}><td><div className="member-cell"><span className={`avatar ${paymentColors[index % paymentColors.length]}`}>{initials(payment.member.fullName)}</span><div><strong>{payment.member.fullName}</strong><small>{payment.membership?.planName ?? "Unallocated payment"}</small></div></div></td><td><span className="payment-id">{payment.id}</span></td><td><span className="payment-date">{payment.paidOn}</span></td><td><span className="payment-method">{payment.paymentMode.name === "UPI" ? <Zap size={13} /> : payment.paymentMode.name === "Cash" ? <IndianRupee size={13} /> : <FileText size={13} />}{payment.paymentMode.name}</span></td><td><strong className="amount-cell">{money(Number(payment.amount))}</strong></td><td><span className={`status-pill ${status.toLowerCase()}`}><i />{status}</span></td><td><button className="icon-button small" onClick={event => { event.stopPropagation(); notify(`Actions opened for ${payment.id}`); }}><MoreHorizontal size={17} /></button></td></tr>; })}{visible.length === 0 && <tr><td colSpan={7}><div className="payment-empty"><ReceiptText size={25} /><strong>{paymentsError ? "Could not load payments" : "No payments found"}</strong><span>{paymentsError || "Try a different search or status."}</span><button onClick={() => { setQuery(""); setTab("All"); void loadPayments(); }}>Refresh</button></div></td></tr>}</>}</tbody></table></div><div className="table-footer"><span>Showing {visible.length} of {payments.length} transactions</span></div></article>
+    <section className="payments-overview-grid"><article className="panel revenue-panel"><div className="payment-card-header"><div><h2>Collection overview</h2><p>Revenue received across all payment methods</p></div><div className="revenue-summary"><div><small>Total collected</small><strong>{summary ? money(Number(summary.totalCollected)) : "—"}</strong></div>{summary?.totalCollectedChange && <span><ArrowUpRight size={13} /> {summary.totalCollectedChange}%</span>}</div></div><RevenueChart chart={analytics?.chart ?? null} /></article><div className="payments-side"><article className="settlement-card"><div className="settlement-top"><span><ArrowUpRight size={18} /></span><div><small>Collection snapshot</small><strong>{summary ? money(Number(summary.totalCollected)) : "—"}</strong></div><em>{analytics ? "Live data" : "Loading"}</em></div><div className="settlement-meta"><div><span>Successful payments</span><strong>{summary?.successfulPaymentCount ?? "—"}</strong></div><div><span>Collection rate</span><strong>{summary ? `${summary.collectionRate}%` : "—"}</strong></div></div><button onClick={() => document.getElementById("payment-transactions")?.scrollIntoView({ behavior: "smooth", block: "start" })}>View transactions <ArrowRight size={14} /></button></article><article className="panel methods-panel"><div className="payment-card-header compact"><div><h2>Payment methods</h2><p>Share of collections this period</p></div><button className="icon-button small" onClick={() => void loadAnalytics()}><MoreHorizontal size={18} /></button></div><div className="method-content"><div className="donut"><div><strong>{summary?.successfulPaymentCount ?? "—"}</strong><span>payments</span></div></div><div className="method-list">{(analytics?.paymentMethods ?? []).map((method, index) => <div className="method-row" key={method.id}><i className={paymentColors[index % paymentColors.length]} /><span>{method.name}</span><strong>{method.share}%</strong><small>{money(Number(method.amount))}</small></div>)}</div></div></article></div></section>
+    <article id="payment-transactions" className="panel transactions-panel"><div className="transactions-header"><div><h2>Recent transactions</h2><p>Track and manage every member payment</p></div><button className="text-button" onClick={() => void loadPayments()} disabled={paymentsLoading}>Refresh <ArrowRight size={14} /></button></div><div className="transaction-toolbar"><div className="payment-tabs">{(["All", "Paid", "Refunded", "Voided"] as PaymentTab[]).map(item => <button key={item} onClick={() => setTab(item)} className={tab === item ? "selected" : ""}>{item}<span>{counts[item]}</span></button>)}</div><div className="transaction-tools"><label className="transaction-search"><Search size={15} /><input id="payment-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search payments" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button>}</label><button className="icon-button table-filter" onClick={() => notify("Advanced filters opened")}><Filter size={16} /></button></div></div><div className="payments-table-wrap"><table className="payments-table"><thead><tr><th>Member</th><th>Date</th><th>Method</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>{paymentsLoading ? <tr><td colSpan={6}><div className="payment-empty"><LoaderCircle size={25} className="animate-spin" /><strong>Loading payments</strong><span>Fetching recent transactions…</span></div></td></tr> : <>{visible.map((payment, index) => { const status = displayPaymentStatus(payment.status); return <tr key={payment.id} onClick={() => notify(`${payment.id} details opened`)}><td><div className="member-cell"><span className={`avatar ${paymentColors[index % paymentColors.length]}`}>{initials(payment.member.fullName)}</span><div><strong>{payment.member.fullName}</strong><small>{payment.membership?.planName ?? "Unallocated payment"}</small></div></div></td><td><span className="payment-date">{payment.paidOn}</span></td><td><span className="payment-method">{payment.paymentMode.name === "UPI" ? <Zap size={13} /> : payment.paymentMode.name === "Cash" ? <IndianRupee size={13} /> : <FileText size={13} />}{payment.paymentMode.name}</span></td><td><strong className="amount-cell">{money(Number(payment.amount))}</strong></td><td><span className={`status-pill ${status.toLowerCase()}`}><i />{status}</span></td><td><button className="icon-button small" onClick={event => { event.stopPropagation(); notify(`Actions opened for ${payment.id}`); }}><MoreHorizontal size={17} /></button></td></tr>; })}{visible.length === 0 && <tr><td colSpan={6}><div className="payment-empty"><ReceiptText size={25} /><strong>{paymentsError ? "Could not load payments" : "No payments found"}</strong><span>{paymentsError || "Try a different search or status."}</span><button onClick={() => { setQuery(""); setTab("All"); void loadPayments(); }}>Refresh</button></div></td></tr>}</>}</tbody></table></div><div className="table-footer"><span>Showing {visible.length} of {payments.length} transactions</span></div></article>
     <footer className="dashboard-footer"><span>Last updated a few seconds ago</span><span><ShieldCheck size={14} /> Payments are encrypted and securely processed</span></footer>
   </main></div><MobileNavigation active="payments" onNotify={notify} onAdd={() => setModal(true)} />{modal && <RecordModal close={() => setModal(false)} notify={notify} onRecorded={refreshPaymentData} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}</div>;
 }

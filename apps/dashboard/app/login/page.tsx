@@ -124,7 +124,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className={styles.signup}>New to Gecco? <a href="mailto:support@gecco.in">Talk to our team</a></p>
+          <p className={styles.signup}>New to Gecco? <a href="https://mail.google.com/mail/?view=cm&fs=1&to=support%40gecco.in" target="_blank" rel="noreferrer">Talk to our team</a></p>
         </div>
         <p className={styles.security}><LockKeyhole size={13} /> Your credentials are securely encrypted.</p>
       </section>

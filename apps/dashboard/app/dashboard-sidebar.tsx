@@ -3,18 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Activity,
-  ArrowUpRight,
-  BarChart3,
   ChevronDown,
   CircleHelp,
   CreditCard,
   Dumbbell,
   LayoutDashboard,
   LogOut,
-  MessageCircle,
-  Settings,
-  Sparkles,
   TrendingUp,
   Users,
   WalletCards,
@@ -80,9 +74,7 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
         </div>)}
       </nav>
       <div className="sidebar-bottom">
-        <div className="insight-card"><span className="insight-icon"><Sparkles size={16} /></span><strong>Growth insight</strong><p>Annual-plan conversion is up 18% this month.</p><button onClick={() => onNotify("Growth insight opened")}>View insight <ArrowUpRight size={14} /></button></div>
-        <button className="nav-item" onClick={() => onNotify("Settings opened")}><Settings size={18} /><span>Settings</span></button>
-        <button className="nav-item" onClick={() => onNotify("Help centre opened")}><CircleHelp size={18} /><span>Help & support</span></button>
+        <button className="nav-item" onClick={() => window.open("https://mail.google.com/mail/?view=cm&fs=1&to=support%40gecco.in", "_blank", "noopener,noreferrer")}><CircleHelp size={18} /><span>Help & support</span></button>
         <button className="nav-item" onClick={signOut}><LogOut size={18} /><span>Sign out</span></button>
       </div>
     </aside>

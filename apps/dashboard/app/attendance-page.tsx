@@ -3,9 +3,9 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity, ArrowDownRight, ArrowUpRight, BarChart3, Bell, CalendarDays,
+  Activity, ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays,
   Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clock3,
-  CreditCard, Download, Dumbbell, Filter, HelpCircle, LayoutDashboard,
+  CreditCard, Download, Dumbbell, Filter, LayoutDashboard,
   LogIn, LogOut, Menu, MessageCircle, Moon, MoreHorizontal, Plus, ScanLine,
   Search, Settings, ShieldCheck, Sparkles, Sun, Timer, TrendingUp,
   UserRoundCheck, Users, WalletCards, X, Zap,
@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import DashboardSidebar from "./dashboard-sidebar";
 import MobileNavigation from "./mobile-navigation";
+import ProfileMenu from "./profile-menu";
 
 type VisitStatus = "In gym" | "Checked out";
 type VisitFilter = "All visits" | VisitStatus;
@@ -63,7 +64,7 @@ function LegacySidebar({ open, close }: { open: boolean; close: () => void }) {
       <nav className="main-nav" aria-label="Primary navigation">
         {navGroups.map((group) => <div className="nav-group" key={group.label}><div className="nav-label">{group.label}</div>{group.items.map(({ label, icon: Icon, active, badge }) => { const route = ({ Overview: "/", Members: "/members", Attendance: "/attendance", Payments: "/payments", Messages: "/messages", Memberships: "/memberships", Trainers: "/trainers", Reports: "/reports", Automations: "/automations" } as Record<string, string>)[label]; return <Link className={`nav-item ${active ? "active" : ""}`} href={route} key={label} onClick={close}><Icon size={18} strokeWidth={active ? 2.2 : 1.8} /><span>{label}</span>{badge && <span className={`nav-badge ${badge === "NEW" ? "new" : ""}`}>{badge}</span>}</Link>; })}</div>)}
       </nav>
-      <div className="sidebar-bottom"><div className="insight-card"><span className="insight-icon"><Sparkles size={16} /></span><strong>Attendance insight</strong><p>Your busiest window starts in 20 minutes.</p><button>View forecast <ArrowUpRight size={14} /></button></div><button className="nav-item"><Settings size={18} /><span>Settings</span></button><button className="nav-item"><CircleHelp size={18} /><span>Help & support</span></button></div>
+      <div className="sidebar-bottom"><div className="insight-card"><span className="insight-icon"><Sparkles size={16} /></span><strong>Attendance insight</strong><p>Your busiest window starts in 20 minutes.</p><button>View forecast <ArrowUpRight size={14} /></button></div><button className="nav-item"><Settings size={18} /><span>Settings</span></button><button className="nav-item" onClick={() => window.open("https://mail.google.com/mail/?view=cm&fs=1&to=support%40gecco.in", "_blank", "noopener,noreferrer")}><CircleHelp size={18} /><span>Help & support</span></button></div>
     </aside>
   </>;
 }
@@ -73,8 +74,8 @@ function ThemeToggle() {
   return <button className="icon-button theme-button" onClick={toggle} aria-label="Toggle color theme"><Sun className="theme-sun" size={18} /><Moon className="theme-moon" size={18} /></button>;
 }
 
-function Header({ onMenu }: { onMenu: () => void }) {
-  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div><button className="search-box"><Search size={16} /><span>Search members, payments...</span><kbd>⌘ K</kbd></button></div><div className="topbar-actions"><button className="icon-button help-button" aria-label="Help"><HelpCircle size={18} /></button><ThemeToggle /><button className="icon-button notification-button" aria-label="Notifications"><Bell size={18} /><i /></button><div className="topbar-divider" /><button className="profile"><span className="avatar avatar-main">PK</span><span className="profile-copy"><strong>Priya Khanna</strong><small>Owner</small></span><ChevronDown size={15} /></button></div></header>;
+function Header({ onMenu, notify }: { onMenu: () => void; notify: (message: string) => void }) {
+  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div></div><div className="topbar-actions"><ThemeToggle /><div className="topbar-divider" /><ProfileMenu name="Priya Khanna" initials="PK" role="Owner" onNotify={notify} /></div></header>;
 }
 
 function StatCard({ icon: Icon, label, value, detail, trend, tone = "purple" }: { icon: LucideIcon; label: string; value: string; detail: string; trend?: "up" | "down"; tone?: string }) {
@@ -111,7 +112,7 @@ export default function AttendancePage() {
 
   return <div className="app-shell attendance-app">
     <DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} />
-    <div className="app-content"><Header onMenu={() => setMobileNav(true)} /><main className="dashboard attendance-dashboard">
+    <div className="app-content"><Header onMenu={() => setMobileNav(true)} notify={notify} /><main className="dashboard attendance-dashboard">
       <div className="attendance-heading"><div><div className="heading-breadcrumb"><span>Workspace</span><ChevronRight size={13} /><strong>Attendance</strong></div><h1>Attendance</h1><p>Track member visits and manage today’s check-ins.</p></div><div className="heading-actions"><div className="date-stepper"><button aria-label="Previous day"><ChevronLeft size={16} /></button><div><CalendarDays size={15} /><span>Today, 8 Aug</span></div><button aria-label="Next day" disabled><ChevronRight size={16} /></button></div><button className="button secondary export-button" onClick={exportVisits}><Download size={16} /> Export</button><button className="button primary" onClick={() => setShowModal(true)}><Plus size={17} /> Check in member</button></div></div>
       <section className="attendance-stats" aria-label="Today’s attendance overview"><StatCard icon={UserRoundCheck} label="In gym now" value={`${84 + insideDelta}`} detail="12% above usual" trend="up" tone="green" /><StatCard icon={LogIn} label="Today's visits" value={`${386 + visits.length - initialVisits.length}`} detail="42 more than last Sat" trend="up" /><StatCard icon={Clock3} label="Peak hour" value="6–7 PM" detail="72 member check-ins" tone="amber" /><StatCard icon={Timer} label="Avg. visit" value="74 min" detail="4 min shorter this week" trend="down" tone="blue" /></section>
       <section className="attendance-overview-grid">

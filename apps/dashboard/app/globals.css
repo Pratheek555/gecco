@@ -129,9 +129,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sidebar-close, .menu-button, .mobile-brand { display: none !important; }
 .location-switcher { border: 1px solid var(--border); background: var(--surface-soft); border-radius: 10px; padding: 10px; display: grid; align-items: center; grid-template-columns: auto 1fr auto; gap: 9px; margin: 0 1px 17px; }
 .location-icon { width: 33px; height: 33px; display: grid; place-items: center; color: var(--brand); background: var(--brand-soft); border-radius: 8px; }
-.location-switcher strong, .location-switcher span { display: block; line-height: 1.25; }
-.location-switcher strong { font-size: 12.5px; }
-.location-switcher span { font-size: 10.5px; color: var(--text-soft); margin-top: 3px; }
+.location-switcher > span:nth-child(2) { display: block; min-width: 0; line-height: 1.25; }
+.location-switcher > span:nth-child(2) strong { display: block; font-size: 12.5px; }
+.location-switcher > span:nth-child(2) small { display: block; margin-top: 3px; color: var(--text-soft); font-size: 10.5px; }
 .location-switcher > svg { color: var(--text-faint); }
 .main-nav { min-height: 0; flex: 1; overflow: auto; }
 .nav-group { margin-bottom: 21px; }
@@ -161,8 +161,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 :root[data-theme="dark"] .theme-button .theme-sun { display: block; }
 :root[data-theme="dark"] .theme-button .theme-moon { display: none; }
 .icon-button.small { width: 31px; height: 31px; }
-.notification-button { position: relative; }
-.notification-button i { position: absolute; width: 6px; height: 6px; right: 7px; top: 6px; border-radius: 50%; background: #ef5368; box-shadow: 0 0 0 2px var(--surface); }
 .topbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 8px; }
 .profile { display: flex; align-items: center; gap: 9px; border: 0; background: transparent; padding: 3px 0; text-align: left; }
 .profile-copy strong, .profile-copy small { display: block; }
@@ -292,7 +290,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 780px) {
   .app-content { margin-left: 0; padding-bottom: 67px; }
   .sidebar { transform: translateX(-105%); box-shadow: 18px 0 50px rgba(0,0,0,.18); }.sidebar.sidebar-open { transform: translateX(0); }.sidebar-close { display: inline-grid !important; }.sidebar-scrim { display: block; position: fixed; inset: 0; z-index: 39; border: 0; background: rgba(10,10,18,.44); backdrop-filter: blur(2px); }
-  .topbar { height: 61px; padding: 0 16px; }.menu-button { display: inline-grid !important; }.mobile-brand { display: block !important; margin-left: 5px; }.mobile-brand .brand span { display: none; }.mobile-brand .brand-mark { width: 27px; height: 27px; }.search-box { display: none; }.help-button, .profile-copy, .profile > svg, .topbar-divider { display: none; }.profile .avatar { width: 31px; height: 31px; }.topbar-left { gap: 2px; }
+  .topbar { height: 61px; padding: 0 16px; }.menu-button { display: inline-grid !important; }.mobile-brand { display: block !important; margin-left: 5px; }.mobile-brand .brand span { display: none; }.mobile-brand .brand-mark { width: 27px; height: 27px; }.search-box { display: none; }.profile-copy, .profile > svg, .topbar-divider { display: none; }.profile .avatar { width: 31px; height: 31px; }.topbar-left { gap: 2px; }
   .dashboard { padding: 20px 16px 16px; }.page-heading { display: block; margin-bottom: 16px; }.page-heading h1 { font-size: 22px; }.heading-actions { margin-top: 14px; flex-wrap: wrap; }.heading-actions .period-select { flex: 1; }.heading-actions .button.primary { flex: 1; }.export-button { width: 34px; padding: 0; }.export-button { font-size: 0; }.export-button svg { width: 15px; }
   .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }.kpi-card { min-height: 103px; padding: 13px; }.kpi-label button { display: none; }.kpi-value-row > strong { font-size: 20px; }.kpi-card > p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .charts-grid, .lower-grid { gap: 10px; }.retention-chart { height: 210px; }.chart-tooltip { display: none; }.chart-annotation, .chart-legend { display: none; }.activity-list { display: block; }.risk-panel { overflow: hidden; }.member-table-wrap { contain: inline-size; }.member-table { min-width: 620px; }
@@ -304,7 +302,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 460px) {
-  .theme-button { margin-left: 0; }.notification-button { display: none; }
+  .theme-button { margin-left: 0; }
   .kpi-grid { grid-template-columns: 1fr 1fr; }.kpi-card { min-width: 0; }.kpi-value-row { display: block; }.kpi-value-row span { margin-top: 5px; }.kpi-card > p { display: none; }
   .card-header { padding: 17px 15px 13px; }.chart-stat, .chart-controls { padding-left: 15px; padding-right: 15px; }.chart-controls > span { display: none; }.retention-chart { margin-left: 41px; margin-right: 15px; }.filter-button { width: 34px; padding: 0; font-size: 0; }.segmented-control button { padding: 0 7px; }.segmented-control button span { display: none; }
   .form-row { grid-template-columns: 1fr; gap: 0; }
@@ -673,7 +671,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* Attendance workspace */
 .attendance-app .location-switcher { width: calc(100% - 2px); color: var(--text); text-align: left; }
-.attendance-app .location-switcher > span { margin: 0; color: inherit; font-size: inherit; }
+.attendance-app .location-switcher > span:nth-child(2) { margin: 0; color: inherit; font-size: inherit; }
 .attendance-app .location-switcher > span:nth-child(2) { min-width: 0; }
 .attendance-app .location-switcher small { display: block; margin-top: 3px; color: var(--text-soft); font-size: 10.5px; }
 .attendance-dashboard { max-width: 1440px; padding-top: 26px; }
@@ -923,6 +921,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .plan-data .good { color: var(--green); }.plan-data .bad { color: var(--red); }
 .plan-card .managed-row-action { margin: 0 -14px; }
 .managed-table-panel { margin-bottom: 12px; overflow: hidden; }
+.membership-actions { position: relative; overflow: visible !important; }
+.membership-menu { position: absolute; z-index: 5; top: calc(100% - 4px); right: 8px; min-width: 92px; display: grid; gap: 2px; padding: 5px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.membership-menu button { padding: 6px 8px; color: var(--text-soft); background: transparent; border: 0; border-radius: 5px; font-size: 9px; text-align: left; }
+.membership-menu button:hover { color: var(--text); background: var(--surface-soft); }
+.membership-menu button:last-child { color: var(--red); }
 .managed-table-panel .member-table td { height: 53px; font-size: 8.5px; }
 
 .trainer-layout, .report-layout, .automation-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(270px, .8fr); gap: 12px; align-items: start; }

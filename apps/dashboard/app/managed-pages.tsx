@@ -42,6 +42,16 @@ export type ManagedView = "Overview" | "Members" | "Memberships" | "Trainers" | 
 type Notify = (message: string) => void;
 
 type PlanOption = { id: string; code: string; name: string; type: "GT" | "PT"; standardMonthlyFee: string | number; isActive: boolean };
+type MembershipRecord = {
+  id: string;
+  startsOn: string;
+  endsOn: string;
+  agreedFee: string | number;
+  status: "ACTIVE" | "EXPIRED" | "CANCELLED";
+  member: { id: string; fullName: string };
+  plan: { id: string; name: string; code: string };
+  trainerAssignments: { trainer: { id: string; fullName: string } }[];
+};
 type PlanCard = {
   id: string;
   code: string;
@@ -195,6 +205,9 @@ function Memberships({ notify }: { notify: Notify }) {
   const [items, setItems] = useState<PlanCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
+  const [membershipsLoading, setMembershipsLoading] = useState(true);
+  const [membershipsError, setMembershipsError] = useState("");
   const [isAddPlanOpen, setIsAddPlanOpen] = useState(false);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
   const visible = useMemo(() => items.filter((plan) => (filter === "All" || plan.state === filter) && `${plan.name} ${plan.detail}`.toLowerCase().includes(query.toLowerCase())), [filter, items, query]);
@@ -206,6 +219,15 @@ function Memberships({ notify }: { notify: Notify }) {
       setItems(data.plans.map(planToCard));
     } catch (reason) { setLoadError(reason instanceof Error ? reason.message : "Could not load membership plans."); }
     finally { setLoading(false); }
+  })(); }, []);
+  useEffect(() => { void (async () => {
+    try {
+      const response = await fetch("/api/memberships");
+      const data = await response.json() as { memberships?: MembershipRecord[]; error?: string };
+      if (!response.ok || !data.memberships) throw new Error(data.error ?? "Could not load active memberships.");
+      setMemberships(data.memberships);
+    } catch (reason) { setMembershipsError(reason instanceof Error ? reason.message : "Could not load active memberships."); }
+    finally { setMembershipsLoading(false); }
   })(); }, []);
   return <>
     <PageHeader eyebrow="MEMBERSHIP MANAGEMENT" title="Memberships" copy="Create plans, track adoption, and stay ahead of upcoming renewals." action="Create plan" onAction={() => setIsAddPlanOpen(true)} secondaryAction="Assign plan" onSecondaryAction={() => setIsAssignPlanOpen(true)} />
@@ -222,15 +244,23 @@ function Memberships({ notify }: { notify: Notify }) {
       <div className="plan-data"><div><small>Members</small><strong>{plan.members}</strong></div><div><small>Revenue</small><strong>{plan.revenue}</strong></div></div>
       <button className="managed-row-action" onClick={() => notify(`${plan.name} opened for editing`)}>Manage plan <ChevronRight size={15} /></button>
     </article>)}{!loading && !loadError && visible.length === 0 && <Empty icon={CreditCard} label="No matching plans" />}</section>
-    <Renewals notify={notify} />
+    <Renewals notify={notify} memberships={memberships} loading={membershipsLoading} error={membershipsError} onDeleted={membershipId => setMemberships(current => current.filter(membership => membership.id !== membershipId))} />
     {isAddPlanOpen && <AddPlanModal close={() => setIsAddPlanOpen(false)} onCreated={plan => { setItems(current => [plan, ...current]); notify("Membership plan created successfully"); }} />}
     {isAssignPlanOpen && <AssignPlanModal close={() => setIsAssignPlanOpen(false)} onAssigned={() => notify("Plan assigned successfully")} />}
   </>;
 }
 
-function Renewals({ notify }: { notify: Notify }) {
-  const rows = [["Ananya Verma", "AV", "Annual Unlimited", "10 Aug", "₹18,000", "Auto-renew", "violet"], ["Dev Patel", "DP", "Strength Pro", "11 Aug", "₹3,499", "Reminder sent", "blue"], ["Kavya Iyer", "KI", "Monthly Flex", "12 Aug", "₹2,499", "Action needed", "amber"]];
-  return <article className="panel managed-table-panel"><div className="managed-card-head"><div><h2>Upcoming renewals</h2><p>Highest-value renewals in the next seven days</p></div><button onClick={() => notify("All upcoming renewals opened")}>View all <ChevronRight size={14} /></button></div><div className="member-table-wrap"><table className="member-table"><thead><tr><th>Member</th><th>Plan</th><th>Renewal</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>{rows.map(([name, initials, plan, date, amount, status, color]) => <tr key={name}><td><div className="member-cell"><span className={`avatar ${color}`}>{initials}</span><strong>{name}</strong></div></td><td>{plan}</td><td>{date}</td><td><strong>{amount}</strong></td><td><span className={`managed-status ${status === "Action needed" ? "warning" : "active"}`}>{status}</span></td><td><button className="icon-button small" onClick={() => notify(`${name}'s renewal opened`)}><ChevronRight size={15} /></button></td></tr>)}</tbody></table></div></article>;
+function Renewals({ notify, memberships, loading, error, onDeleted }: { notify: Notify; memberships: MembershipRecord[]; loading: boolean; error: string; onDeleted: (membershipId: string) => void }) {
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  async function deleteMembership(membership: MembershipRecord) {
+    if (!window.confirm(`Cancel ${membership.member.fullName}'s ${membership.plan.name} membership?`)) return;
+    const response = await fetch(`/api/memberships/${membership.id}`, { method: "DELETE" });
+    const data = await response.json() as { error?: string };
+    if (!response.ok) { notify(data.error ?? "Could not delete membership."); return; }
+    onDeleted(membership.id);
+    notify("Membership deleted successfully");
+  }
+  return <article className="panel managed-table-panel"><div className="managed-card-head"><div><h2>Active memberships</h2><p>All active memberships, status, and trainer assignments</p></div><button onClick={() => notify("All active memberships opened")}>View all <ChevronRight size={14} /></button></div><div className="member-table-wrap"><table className="member-table"><thead><tr><th>Member</th><th>Plan</th><th>Ends</th><th>Amount</th><th>Status</th><th>Trainer</th><th aria-label="Actions" /></tr></thead><tbody>{loading ? <tr><td colSpan={7}><div className="payment-empty"><LoaderCircle size={22} className="plan-spinner" /><strong>Loading memberships</strong><span>Fetching active memberships…</span></div></td></tr> : error ? <tr><td colSpan={7}><div className="payment-empty"><strong>Could not load memberships</strong><span>{error}</span></div></td></tr> : memberships.length === 0 ? <tr><td colSpan={7}><div className="payment-empty"><strong>No active memberships</strong><span>Assign a plan to a member to see it here.</span></div></td></tr> : memberships.map((membership) => <tr key={membership.id}><td><div className="member-cell"><span className="avatar violet">{membership.member.fullName.split(" ").map(part => part[0]).join("").slice(0, 2).toUpperCase()}</span><strong>{membership.member.fullName}</strong></div></td><td><div><strong>{membership.plan.name}</strong><small>{membership.plan.code}</small></div></td><td>{new Date(membership.endsOn).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td><td><strong>₹{Number(membership.agreedFee).toLocaleString("en-IN")}</strong></td><td><span className="managed-status active">{membership.status === "ACTIVE" ? "Active" : membership.status}</span></td><td>{membership.trainerAssignments[0]?.trainer.fullName ?? <span className="last-visit">Unassigned</span>}</td><td className="membership-actions"><button className="icon-button small" aria-label={`Actions for ${membership.member.fullName}`} onClick={() => setOpenMenu(current => current === membership.id ? null : membership.id)}><MoreHorizontal size={17} /></button>{openMenu === membership.id && <div className="membership-menu" role="menu"><button role="menuitem" onClick={() => { setOpenMenu(null); notify(`Edit opened for ${membership.member.fullName}'s membership`); }}>Edit</button><button role="menuitem" onClick={() => { setOpenMenu(null); void deleteMembership(membership); }}>Delete</button></div>}</td></tr>)}</tbody></table></div></article>;
 }
 
 function Trainers({ notify }: { notify: Notify }) {
@@ -404,7 +434,7 @@ function Overview() {
 
     <section className="overview-stats" aria-label="Business summary">
       <Card className="overview-stat"><span className="managed-stat-icon purple"><Users /></span><div><small>Active memberships</small><strong>{loading && !data ? "—" : summary?.activeMemberships ?? 0}</strong><em>{summary ? `${summary.totalMembers} total members` : "Loading member totals…"}</em></div></Card>
-      <Card className="overview-stat"><span className="managed-stat-icon amber"><CalendarDays /></span><div><small>Expiring in {days} days</small><strong>{loading && !data ? "—" : summary?.expiringCount ?? 0}</strong><em>{summary ? `${overviewMoney.format(Number(summary.expiringValue))} membership value` : "Loading upcoming expiries…"}</em></div></Card>
+      <Card className="overview-stat"><span className="managed-stat-icon amber"><CalendarDays /></span><div><small>Expiring in {days} days</small><strong>{loading ? "—" : summary?.expiringCount ?? 0}</strong><em>{loading ? "Loading upcoming expiries…" : summary ? `${overviewMoney.format(Number(summary.expiringValue))} membership value` : "Loading upcoming expiries…"}</em></div></Card>
       <Card className="overview-stat"><span className="managed-stat-icon green"><WalletCards /></span><div><small>Collected this month</small><strong>{summary ? overviewMoney.format(Number(summary.totalCollected)) : "—"}</strong><em className={Number(summary?.totalCollectedChange ?? 0) < 0 ? "bad" : "good"}>{summary ? collectedChange : "Loading collections…"}</em></div></Card>
       <Card className="overview-stat"><span className="managed-stat-icon blue"><ReceiptText /></span><div><small>Outstanding dues</small><strong>{summary ? overviewMoney.format(Number(summary.outstandingAmount)) : "—"}</strong><em>{summary ? `${summary.overdueMembers} overdue ${summary.overdueMembers === 1 ? "member" : "members"}` : "Loading outstanding dues…"}</em></div></Card>
     </section>
@@ -412,15 +442,15 @@ function Overview() {
     <section className="overview-action-grid">
       <Card className="overview-expiring-card">
         <CardHeader className="overview-section-head"><div><CardTitle>Memberships expiring soon</CardTitle><CardDescription>Active memberships ending in the selected window.</CardDescription></div><div className="overview-window" aria-label="Expiry window">{([7, 14, 30] as OverviewWindow[]).map((window) => <Button key={window} size="sm" variant={days === window ? "secondary" : "ghost"} aria-pressed={days === window} onClick={() => setDays(window)}>{window} days</Button>)}</div></CardHeader>
-        <CardContent className="overview-expiring-content">
+        <CardContent className="overview-expiring-content" aria-busy={loading}>
           <div className="overview-expiry-table-head" aria-hidden><span>Member</span><span>Expires</span><span>Payment position</span><span /></div>
-          {loading && !data ? <div className="overview-loading"><LoaderCircle /><span>Loading upcoming expiries…</span></div> : data?.expiringMemberships.length ? <div className="overview-expiry-list">{data.expiringMemberships.slice(0, 5).map((membership) => {
+          {loading ? <div className="overview-loading" role="status"><LoaderCircle /><span>Loading upcoming expiries…</span></div> : data?.expiringMemberships.length ? <div className="overview-expiry-list">{data.expiringMemberships.slice(0, 5).map((membership) => {
             const overdue = Number(membership.overdueAmount) > 0;
             const outstanding = Number(membership.outstandingAmount) > 0;
             return <div className="overview-expiry-row" key={membership.id}><div className="overview-person"><Avatar size="lg"><AvatarFallback>{memberInitials(membership.member.fullName)}</AvatarFallback></Avatar><span><strong>{membership.member.fullName}</strong><small>{membership.planName}</small></span></div><div className="overview-expiry-date"><strong>{expiryLabel(data.today, membership.endsOn)}</strong><small>{overviewDate.format(new Date(`${membership.endsOn}T00:00:00Z`))}</small></div><div>{overdue ? <Badge variant="destructive">{overviewMoney.format(Number(membership.overdueAmount))} overdue</Badge> : outstanding ? <Badge variant="outline">{overviewMoney.format(Number(membership.outstandingAmount))} outstanding</Badge> : <Badge variant="secondary"><Check />Paid</Badge>}</div><Button variant="ghost" size="sm" asChild><Link href={`/members?member=${membership.member.id}`}>View member<ChevronRight /></Link></Button></div>;
           })}</div> : <div className="overview-empty"><span className="managed-glyph green"><Check /></span><strong>No memberships expire in the next {days} days</strong><p>You’re all caught up. Try a wider date range to look further ahead.</p></div>}
         </CardContent>
-        <div className="overview-card-footer"><span>{summary ? `${summary.expiringCount} upcoming ${summary.expiringCount === 1 ? "expiry" : "expiries"}` : "Upcoming expiries"}</span><Button variant="link" size="sm" asChild><Link href="/members">View all members<ArrowRight /></Link></Button></div>
+        <div className="overview-card-footer"><span>{loading ? "Updating upcoming expiries…" : summary ? `${summary.expiringCount} upcoming ${summary.expiringCount === 1 ? "expiry" : "expiries"}` : "Upcoming expiries"}</span><Button variant="link" size="sm" asChild><Link href="/members">View all members<ArrowRight /></Link></Button></div>
       </Card>
 
       <Card className="overview-collection-card">

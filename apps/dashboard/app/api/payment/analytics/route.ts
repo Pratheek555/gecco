@@ -4,23 +4,22 @@ import { getSession } from "@/app/api/auth/session";
 
 export const runtime = "nodejs";
 
-const periods = ["THIS_MONTH", "LAST_MONTH", "LAST_3_MONTHS"] as const;
-type Period = (typeof periods)[number];
-
-function startOfMonth(date: Date, offset: number) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1));
-}
-
 function dateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function buildRange(period: Period, now: Date) {
-  const monthCount = period === "LAST_3_MONTHS" ? 3 : 1;
-  const offset = period === "LAST_MONTH" ? -1 : period === "LAST_3_MONTHS" ? -2 : 0;
-  const start = startOfMonth(now, offset);
-  const end = startOfMonth(start, monthCount);
-  const previousStart = startOfMonth(start, -monthCount);
+function parseDate(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || dateKey(date) !== value ? null : date;
+}
+
+function buildRange(start: Date, endInclusive: Date) {
+  const end = new Date(endInclusive);
+  end.setUTCDate(end.getUTCDate() + 1);
+  const duration = end.getTime() - start.getTime();
+  const previousStart = new Date(start.getTime() - duration);
 
   return { start, end, previousStart, previousEnd: start };
 }
@@ -45,15 +44,18 @@ export async function GET(request: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
-  const periodValue = new URL(request.url).searchParams.get("period") ?? "THIS_MONTH";
-  const period = periods.find((candidate) => candidate === periodValue);
-  if (!period) return NextResponse.json({ error: "period must be THIS_MONTH, LAST_MONTH, or LAST_3_MONTHS." }, { status: 400 });
+  const searchParams = new URL(request.url).searchParams;
+  const start = parseDate(searchParams.get("start"));
+  const end = parseDate(searchParams.get("end"));
+  if (!start || !end || end < start) {
+    return NextResponse.json({ error: "start and end must be YYYY-MM-DD dates, with end on or after start." }, { status: 400 });
+  }
 
   const gymId = session.activeGym.id;
-  const { start, end, previousStart, previousEnd } = buildRange(period, new Date());
+  const { end: exclusiveEnd, previousStart, previousEnd } = buildRange(start, end);
   const [currentPayments, previousPayments, voidedPayments, balances] = await Promise.all([
     prisma.payment.findMany({
-      where: { gymId, status: "SUCCEEDED", paidOn: { gte: start, lt: end } },
+      where: { gymId, status: "SUCCEEDED", paidOn: { gte: start, lt: exclusiveEnd } },
       select: { amount: true, paidOn: true, paymentMode: { select: { id: true, name: true } } },
     }),
     prisma.payment.findMany({
@@ -61,7 +63,7 @@ export async function GET(request: Request) {
       select: { amount: true, paidOn: true },
     }),
     prisma.payment.findMany({
-      where: { gymId, status: "VOIDED", paidOn: { gte: start, lt: end } },
+      where: { gymId, status: "VOIDED", paidOn: { gte: start, lt: exclusiveEnd } },
       select: { amount: true },
     }),
     prisma.memberBalanceSummary.findMany({
@@ -85,7 +87,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
-    period: { start: dateKey(start), end: dateKey(new Date(end.getTime() - 1)) },
+    period: { start: dateKey(start), end: dateKey(end) },
     summary: {
       totalCollected: totalCollected.toFixed(2),
       totalCollectedChange: previousCollected === 0 ? null : ((totalCollected - previousCollected) / previousCollected * 100).toFixed(1),
@@ -96,7 +98,7 @@ export async function GET(request: Request) {
       collectionRate: collectionRate.toFixed(1),
     },
     chart: {
-      current: bucketPayments(currentPayments, start, end),
+      current: bucketPayments(currentPayments, start, exclusiveEnd),
       previous: bucketPayments(previousPayments, previousStart, previousEnd),
     },
     paymentMethods: [...methods.values()].sort((first, second) => second.amount - first.amount).map((method) => ({
