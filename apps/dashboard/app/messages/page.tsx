@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import {
-  Activity, Archive, ArrowLeft, BarChart3, Bell, Check, CheckCheck,
-  ChevronDown, CircleHelp, CreditCard, Dumbbell, FileText, HelpCircle,
+  Activity, Archive, ArrowLeft, BarChart3, Check, CheckCheck,
+  ChevronDown, CircleHelp, CreditCard, Dumbbell, FileText,
   LayoutDashboard, Menu, MessageCircle, Moon, MoreHorizontal,
   Paperclip, Phone, Plus, Search, Send, Settings, Sparkles, Sun, Tag,
   TrendingUp, Users, WalletCards, X, Zap,
@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import DashboardSidebar from "../dashboard-sidebar";
 import MobileNavigation from "../mobile-navigation";
+import ProfileMenu from "../profile-menu";
 
 type View = "Inbox" | "Campaigns" | "Templates";
 type InboxFilter = "All" | "Unread";
@@ -91,7 +92,7 @@ function LegacySidebar({ open, close }: { open: boolean; close: () => void }) {
           return href ? <Link key={label} href={href} onClick={close} className={`nav-item ${active ? "active" : ""}`}>{content}</Link> : <button key={label} className="nav-item" onClick={close}>{content}</button>;
         })}</div>)}
       </nav>
-      <div className="sidebar-bottom"><div className="insight-card"><div className="insight-icon"><Sparkles size={16} /></div><strong>Messaging tip</strong><p>Personal check-ins get 2.4× more replies.</p><button>See best practices</button></div><button className="nav-item"><Settings size={18} /><span>Settings</span></button><button className="nav-item"><CircleHelp size={18} /><span>Help & support</span></button></div>
+      <div className="sidebar-bottom"><div className="insight-card"><div className="insight-icon"><Sparkles size={16} /></div><strong>Messaging tip</strong><p>Personal check-ins get 2.4× more replies.</p><button>See best practices</button></div><button className="nav-item"><Settings size={18} /><span>Settings</span></button><button className="nav-item" onClick={() => window.open("https://mail.google.com/mail/?view=cm&fs=1&to=support%40gecco.in", "_blank", "noopener,noreferrer")}><CircleHelp size={18} /><span>Help & support</span></button></div>
     </aside>
   </>;
 }
@@ -105,8 +106,8 @@ function ThemeToggle() {
   return <button className="icon-button theme-button" onClick={toggleTheme} aria-label="Toggle color theme"><Sun className="theme-sun" size={18} /><Moon className="theme-moon" size={18} /></button>;
 }
 
-function Header({ onMenu }: { onMenu: () => void }) {
-  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div><button className="search-box"><Search size={16} /><span>Search members, payments...</span><kbd>⌘ K</kbd></button></div><div className="topbar-actions"><button className="icon-button help-button" aria-label="Help"><HelpCircle size={18} /></button><ThemeToggle /><button className="icon-button notification-button" aria-label="Notifications"><Bell size={18} /><i /></button><div className="topbar-divider" /><button className="profile"><span className="avatar avatar-main">PK</span><span className="profile-copy"><strong>Priya Khanna</strong><small>Owner</small></span><ChevronDown size={15} /></button></div></header>;
+function Header({ onMenu, notify }: { onMenu: () => void; notify: (message: string) => void }) {
+  return <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={onMenu} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div></div><div className="topbar-actions"><ThemeToggle /><div className="topbar-divider" /><ProfileMenu name="Priya Khanna" initials="PK" role="Owner" onNotify={notify} /></div></header>;
 }
 
 function Inbox({ showToast }: { showToast: (message: string) => void }) {
@@ -181,5 +182,5 @@ export default function MessagesPage() {
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [toast, setToast] = useState("");
   function showToast(message: string) { setToast(message); window.setTimeout(() => setToast(""), 2600); }
-  return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={showToast} /><div className="app-content messages-app-content"><Header onMenu={() => setMobileNav(true)} /><main className="messages-page"><div className="messages-heading"><div><h1>Messages</h1><p>Connect with members and keep every conversation in one place.</p></div><button className="button primary" onClick={() => setShowNewMessage(true)}><Plus size={16} /> New message</button></div><div className="messages-tabs" role="tablist">{(["Inbox", "Campaigns", "Templates"] as View[]).map(item => <button role="tab" aria-selected={view === item} className={view === item ? "selected" : ""} key={item} onClick={() => setView(item)}>{item}{item === "Inbox" && <span>8</span>}</button>)}</div>{view === "Inbox" && <Inbox showToast={showToast} />}{view === "Campaigns" && <Campaigns showToast={showToast} />}{view === "Templates" && <Templates showToast={showToast} />}</main></div><MobileNavigation onNotify={showToast} onAdd={() => setShowNewMessage(true)} />{showNewMessage && <NewMessageModal close={() => setShowNewMessage(false)} showToast={showToast} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}</div>;
+  return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={showToast} /><div className="app-content messages-app-content"><Header onMenu={() => setMobileNav(true)} notify={showToast} /><main className="messages-page"><div className="messages-heading"><div><h1>Messages</h1><p>Connect with members and keep every conversation in one place.</p></div><button className="button primary" onClick={() => setShowNewMessage(true)}><Plus size={16} /> New message</button></div><div className="messages-tabs" role="tablist">{(["Inbox", "Campaigns", "Templates"] as View[]).map(item => <button role="tab" aria-selected={view === item} className={view === item ? "selected" : ""} key={item} onClick={() => setView(item)}>{item}{item === "Inbox" && <span>8</span>}</button>)}</div>{view === "Inbox" && <Inbox showToast={showToast} />}{view === "Campaigns" && <Campaigns showToast={showToast} />}{view === "Templates" && <Templates showToast={showToast} />}</main></div><MobileNavigation onNotify={showToast} onAdd={() => setShowNewMessage(true)} />{showNewMessage && <NewMessageModal close={() => setShowNewMessage(false)} showToast={showToast} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}</div>;
 }

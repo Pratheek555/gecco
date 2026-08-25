@@ -1,13 +1,14 @@
 "use client";
 
 import {
-  Bell, Check, ChevronDown, HelpCircle, Menu, Moon,
-  Search, Sun,
+  Check, Menu, Moon,
+  Sun,
 } from "lucide-react";
 import { useState } from "react";
 import { ManagedPage, type ManagedView } from "./managed-pages";
 import DashboardSidebar, { Brand } from "./dashboard-sidebar";
 import MobileNavigation from "./mobile-navigation";
+import ProfileMenu from "./profile-menu";
 
 function ThemeToggle() {
   function toggle() { const dark = document.documentElement.dataset.theme !== "dark"; document.documentElement.dataset.theme = dark ? "dark" : "light"; localStorage.setItem("gecco-theme", dark ? "dark" : "light"); }
@@ -20,7 +21,7 @@ export default function ManageShell({ view }: { view: Exclude<ManagedView, "Memb
   function notify(message: string) { setToast(message); window.setTimeout(() => setToast(""), 2600); }
   return <div className="app-shell">
     <DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} />
-    <div className="app-content"><header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div><button className="search-box" onClick={() => notify("Global search opened")}><Search size={16} /><span>Search members, payments...</span><kbd>⌘ K</kbd></button></div><div className="topbar-actions"><button className="icon-button help-button" onClick={() => notify("Help centre opened")} aria-label="Help"><HelpCircle size={18} /></button><ThemeToggle /><button className="icon-button notification-button" onClick={() => notify("You have 3 new notifications")} aria-label="Notifications"><Bell size={18} /><i /></button><div className="topbar-divider" /><button className="profile" onClick={() => notify("Profile menu opened")}><span className="avatar avatar-main">PK</span><span className="profile-copy"><strong>Priya Khanna</strong><small>Owner</small></span><ChevronDown size={15} /></button></div></header><main className="dashboard managed-dashboard"><ManagedPage view={view} notify={notify} /></main></div>
+    <div className="app-content"><header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button><div className="mobile-brand"><Brand /></div></div><div className="topbar-actions"><ThemeToggle /><div className="topbar-divider" /><ProfileMenu name="Priya Khanna" initials="PK" role="Owner" onNotify={notify} /></div></header><main className="dashboard managed-dashboard"><ManagedPage view={view} notify={notify} /></main></div>
     <MobileNavigation onNotify={notify} />
     {toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}
   </div>;
