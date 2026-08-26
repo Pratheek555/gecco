@@ -324,6 +324,19 @@ export default function LandingPage() {
                 <small className={styles.commitment}>Minimum 3-month commitment</small>
                 <a href="mailto:support@gecco.in?subject=Gecco%20Pro%20plan">Choose Pro <ArrowRight /></a>
               </article>
+
+              <article className={styles.priceCard}>
+                <header><span>Pro Max</span><small>For teams ready to scale</small></header>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>5,769</strong><span>/ month + GST</span></div>
+                <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO + Dashboard + automation + priority support</strong></span></div>
+                <div className={styles.termPrices}>
+                  <span><small>3 months</small><strong>₹17,307</strong></span>
+                  <span><small>6 months</small><strong>₹34,614</strong></span>
+                  <span><small>12 months</small><strong>₹69,228</strong></span>
+                </div>
+                <small className={styles.commitment}>Minimum 3-month commitment</small>
+                <a href="mailto:support@gecco.in?subject=Gecco%20Pro%20Max%20plan">Choose Pro Max <ArrowRight /></a>
+              </article>
             </div>
           </section>
 
