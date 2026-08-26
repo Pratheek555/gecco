@@ -286,8 +286,8 @@ export default function LandingPage() {
 
             <div className={styles.pricingGrid}>
               <article className={styles.priceCard}>
-                <header><span>Starter</span><small>For a strong foundation</small></header>
-                <div className={styles.monthlyPrice}><sup>₹</sup><strong>1,899</strong><span>/ month</span></div>
+                <header><span>Standard</span><small>For a strong foundation</small></header>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>2,799</strong><span>/ month + GST</span></div>
                 <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO</strong></span></div>
                 <div className={styles.termPrices}>
                   <span><small>3 months</small><strong>₹5,697</strong></span>
@@ -295,13 +295,13 @@ export default function LandingPage() {
                   <span><small>12 months</small><strong>₹18,999</strong></span>
                 </div>
                 <small className={styles.commitment}>Minimum 3-month commitment</small>
-                <a href="mailto:support@gecco.in?subject=Gecco%20Starter%20plan">Choose Starter <ArrowRight /></a>
+                <a href="mailto:support@gecco.in?subject=Gecco%20Standard%20plan">Choose Standard <ArrowRight /></a>
               </article>
 
               <article className={`${styles.priceCard} ${styles.priceFeatured}`}>
                 <div className={styles.popularTag}>Most popular</div>
                 <header><span>Plus</span><small>For connected growth</small></header>
-                <div className={styles.monthlyPrice}><sup>₹</sup><strong>3,299</strong><span>/ month</span></div>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>3,699</strong><span>/ month + GST</span></div>
                 <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO + Dashboard</strong></span></div>
                 <div className={styles.termPrices}>
                   <span><small>3 months</small><strong>₹8,999</strong></span>
@@ -314,7 +314,7 @@ export default function LandingPage() {
 
               <article className={styles.priceCard}>
                 <header><span>Pro</span><small>For ambitious teams</small></header>
-                <div className={styles.monthlyPrice}><sup>₹</sup><strong>4,499</strong><span>/ month</span></div>
+                <div className={styles.monthlyPrice}><sup>₹</sup><strong>4,749</strong><span>/ month + GST</span></div>
                 <div className={styles.planIncludes}><i><Check /></i><span><small>What&apos;s included</small><strong>Website + SEO + Dashboard + automation</strong></span></div>
                 <div className={styles.termPrices}>
                   <span><small>3 months</small><strong>₹12,499</strong></span>
