@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  MessageCircle,
   ChevronDown,
   CircleHelp,
   CreditCard,
@@ -24,14 +25,14 @@ const navigation = [
       { label: "Members", icon: Users, href: "/members" },
       // { label: "Attendance", icon: Activity, href: "/attendance" },
       { label: "Payments", icon: WalletCards, href: "/payments" },
-      // { label: "Messages", icon: MessageCircle, href: "/messages", badge: "8" },
+      { label: "Messages", icon: MessageCircle, href: "/messages", badge: "8" },
     ],
   },
   {
     label: "Manage",
     items: [
       { label: "Memberships", icon: CreditCard, href: "/memberships" },
-      // { label: "Trainers", icon: Dumbbell, href: "/trainers" },
+      { label: "Trainers", icon: Dumbbell, href: "/trainers" },
       // { label: "Reports", icon: BarChart3, href: "/reports" },
       { label: "Automations", icon: Zap, href: "/automations", badge: "NEW" },
     ],
