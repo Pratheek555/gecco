@@ -28,7 +28,7 @@ const navItems = [
 ] as const;
 
 const dashboardUrl =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://gecco.in";
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://dashboard.gecco.in";
 
 function Brand() {
   return <span className={styles.brand}><b>Gecco</b></span>;
