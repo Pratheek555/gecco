@@ -9,6 +9,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const gymId = session.activeGym.id;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
   const [members, memberSummary] = await Promise.all([
     prisma.member.findMany({
       where: { gymId },
@@ -22,10 +24,29 @@ export async function GET() {
           select: {
             id: true,
             planTypeSnapshot: true,
+            durationMonths: true,
             agreedFee: true,
             startsOn: true,
             endsOn: true,
             status: true,
+            charges: {
+              where: { status: { not: "VOIDED" } },
+              select: {
+                amount: true,
+                allocations: {
+                  where: { payment: { status: "SUCCEEDED" } },
+                  select: { amount: true },
+                },
+              },
+            },
+            trainerAssignments: {
+              where: {
+                startsOn: { lte: today },
+                OR: [{ endsOn: null }, { endsOn: { gte: today } }],
+              },
+              orderBy: { startsOn: "desc" },
+              select: { trainer: { select: { fullName: true } } },
+            },
           },
         },
       },
@@ -48,7 +69,28 @@ export async function GET() {
   return NextResponse.json({
     gymId,
     members: members.map((member) => ({
-      ...member,
+      id: member.id,
+      fullName: member.fullName,
+      memberships: member.memberships.map((membership) => ({
+        id: membership.id,
+        durationMonths: membership.durationMonths,
+        planTypeSnapshot: membership.planTypeSnapshot,
+        agreedFee: membership.agreedFee.toString(),
+        startsOn: membership.startsOn.toISOString().slice(0, 10),
+        endsOn: membership.endsOn.toISOString().slice(0, 10),
+        status: membership.status,
+        trainers: membership.trainerAssignments.map((assignment) => assignment.trainer.fullName),
+        totalAmount: membership.agreedFee.toString(),
+        paidAmount: membership.charges
+          .flatMap((charge) => charge.allocations)
+          .reduce((total, allocation) => total + Number(allocation.amount), 0)
+          .toFixed(2),
+      })),
+      totalAmount: member.memberships.reduce((total, membership) => total + Number(membership.agreedFee), 0).toFixed(2),
+      paidAmount: member.memberships
+        .flatMap((membership) => membership.charges.flatMap((charge) => charge.allocations))
+        .reduce((total, allocation) => total + Number(allocation.amount), 0)
+        .toFixed(2),
       balance: summariesByMemberId.get(member.id) ?? {
         totalOutstanding: "0",
         overdueAmount: "0",
