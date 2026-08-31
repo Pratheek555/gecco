@@ -140,6 +140,8 @@ model Plan {
   name               String
   type               PlanType
   standardMonthlyFee Decimal      @map("standard_monthly_fee") @db.Decimal(12, 2)
+  durationMonths     Int          @default(1) @map("duration_months")
+  requiresTrainer    Boolean      @default(false) @map("requires_trainer")
   isActive           Boolean      @default(true) @map("is_active")
   createdAt          DateTime     @default(now()) @map("created_at")
   memberships        Membership[]
@@ -154,6 +156,7 @@ model Membership {
   memberId           String                        @map("member_id") @db.Uuid
   planId             String                        @map("plan_id") @db.Uuid
   planTypeSnapshot   PlanType                      @map("plan_type_snapshot")
+  durationMonths     Int                           @default(1) @map("duration_months")
   startsOn           DateTime                      @map("starts_on") @db.Date
   endsOn             DateTime                      @map("ends_on") @db.Date
   agreedFee          Decimal                       @map("agreed_fee") @db.Decimal(12, 2)

@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 type CreateMembershipBody = {
   planId?: unknown;
   startsOn?: unknown;
-  endsOn?: unknown;
   agreedFee?: unknown;
+  trainerId?: unknown;
 };
 
 function parseDate(value: unknown) {
@@ -16,6 +16,13 @@ function parseDate(value: unknown) {
 
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
+}
+
+function addMonthsClamped(date: Date, months: number) {
+  const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(date.getUTCDate(), lastDay));
+  return target;
 }
 
 function parseFee(value: unknown) {
@@ -43,18 +50,17 @@ export async function POST(request: Request, context: RouteContext<"/api/members
   }
 
   const startsOn = parseDate(body.startsOn);
-  const endsOn = parseDate(body.endsOn);
   const agreedFee = body.agreedFee === undefined ? undefined : parseFee(body.agreedFee);
 
-  if (typeof body.planId !== "string" || !body.planId || !startsOn || !endsOn || agreedFee === null) {
+  if (typeof body.planId !== "string" || !body.planId || !startsOn || agreedFee === null) {
     return NextResponse.json(
-      { error: "planId, startsOn, and endsOn are required; agreedFee must be a non-negative amount when provided." },
+      { error: "planId and startsOn are required; agreedFee must be a non-negative amount when provided." },
       { status: 400 },
     );
   }
 
-  if (endsOn < startsOn) {
-    return NextResponse.json({ error: "endsOn must be on or after startsOn." }, { status: 400 });
+  if (body.trainerId !== undefined && (typeof body.trainerId !== "string" || !body.trainerId.trim())) {
+    return NextResponse.json({ error: "trainerId must be a valid trainer id when provided." }, { status: 400 });
   }
 
   const [member, plan] = await Promise.all([
@@ -64,19 +70,32 @@ export async function POST(request: Request, context: RouteContext<"/api/members
     }),
     prisma.plan.findFirst({
       where: { id: body.planId, gymId: session.activeGym.id, isActive: true },
-      select: { id: true, type: true, standardMonthlyFee: true },
+      select: { id: true, type: true, standardMonthlyFee: true, durationMonths: true, requiresTrainer: true },
     }),
   ]);
 
   if (!member) return NextResponse.json({ error: "Member not found." }, { status: 404 });
   if (!plan) return NextResponse.json({ error: "Active plan not found." }, { status: 404 });
 
+  const endsOn = addMonthsClamped(startsOn, plan.durationMonths);
+
+  const trainerId = typeof body.trainerId === "string" ? body.trainerId.trim() : null;
+  if (plan.requiresTrainer && !trainerId) {
+    return NextResponse.json({ error: "A trainer must be selected for this plan." }, { status: 400 });
+  }
+
+  const trainer = trainerId
+    ? await prisma.trainer.findFirst({ where: { id: trainerId, gymId: session.activeGym.id, isActive: true }, select: { id: true } })
+    : null;
+  if (trainerId && !trainer) return NextResponse.json({ error: "Active trainer not found." }, { status: 404 });
+
   const membershipFee = agreedFee ?? plan.standardMonthlyFee;
-  const membership = await prisma.membership.create({
+  const membership = await prisma.$transaction(async (tx) => tx.membership.create({
     data: {
       memberId: member.id,
       planId: plan.id,
       planTypeSnapshot: plan.type,
+      durationMonths: plan.durationMonths,
       startsOn,
       endsOn,
       agreedFee: membershipFee,
@@ -89,9 +108,10 @@ export async function POST(request: Request, context: RouteContext<"/api/members
           dueOn: startsOn,
         },
       },
+      ...(trainer ? { trainerAssignments: { create: { trainerId: trainer.id, startsOn, endsOn } } } : {}),
     },
-    include: { plan: true, charges: true },
-  });
+    include: { plan: true, charges: true, trainerAssignments: true },
+  }));
 
 
   return NextResponse.json(membership, { status: 201 });

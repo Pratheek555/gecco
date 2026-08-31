@@ -12,6 +12,8 @@ type CreatePlanBody = {
   name?: unknown;
   type?: unknown;
   standardMonthlyFee?: unknown;
+  durationMonths?: unknown;
+  requiresTrainer?: unknown;
   isActive?: unknown;
 };
 
@@ -31,6 +33,16 @@ function parseMonthlyFee(value: unknown) {
   return null;
 }
 
+function parseDurationMonths(value: unknown) {
+  if (value === undefined) return 1;
+  if (typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 120) return value;
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const months = Number(value.trim());
+    if (months > 0 && months <= 120) return months;
+  }
+  return null;
+}
+
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -38,7 +50,7 @@ export async function GET() {
   const plans = await prisma.plan.findMany({
     where: { gymId: session.activeGym.id },
     orderBy: { name: "asc" },
-    select: { id: true, code: true, name: true, type: true, standardMonthlyFee: true, isActive: true },
+    select: { id: true, code: true, name: true, type: true, standardMonthlyFee: true, durationMonths: true, requiresTrainer: true, isActive: true },
   });
 
   return NextResponse.json({ plans });
@@ -62,17 +74,22 @@ export async function POST(request: Request) {
   const code = typeof body.code === "string" ? body.code.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const monthlyFee = parseMonthlyFee(body.standardMonthlyFee);
+  const durationMonths = parseDurationMonths(body.durationMonths);
+  const requiresTrainer = body.requiresTrainer ?? false;
   const isActive = body.isActive ?? true;
 
-  if (!code || !name || !isPlanType(body.type) || monthlyFee === null) {
+  if (!code || !name || !isPlanType(body.type) || monthlyFee === null || durationMonths === null) {
     return NextResponse.json(
-      { error: "code, name, type (GT or PT), and a non-negative standardMonthlyFee are required." },
+      { error: "code, name, type (GT or PT), a positive durationMonths, and a non-negative standardMonthlyFee are required." },
       { status: 400 },
     );
   }
 
   if (typeof isActive !== "boolean") {
     return NextResponse.json({ error: "isActive must be a boolean." }, { status: 400 });
+  }
+  if (typeof requiresTrainer !== "boolean") {
+    return NextResponse.json({ error: "requiresTrainer must be a boolean." }, { status: 400 });
   }
 
   try {
@@ -83,6 +100,8 @@ export async function POST(request: Request) {
         name,
         type: body.type,
         standardMonthlyFee: monthlyFee,
+        durationMonths,
+        requiresTrainer,
         isActive,
       },
     });

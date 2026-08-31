@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   CreditCard,
+  Filter,
   Mail,
   Menu,
   Moon,
@@ -56,17 +57,23 @@ type MembershipStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 
 type Membership = {
   id: string;
+  durationMonths: number;
   planTypeSnapshot: "GT" | "PT";
   agreedFee: string;
   startsOn: string;
   endsOn: string;
   status: MembershipStatus;
+  trainers: string[];
+  totalAmount: string;
+  paidAmount: string;
 };
 
 type Member = {
   id: string;
   fullName: string;
   memberships: Membership[];
+  totalAmount: string;
+  paidAmount: string;
   balance: {
     totalOutstanding: string;
     overdueAmount: string;
@@ -119,6 +126,12 @@ const money = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
+const tableDate = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -129,16 +142,17 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function membershipDuration(startsOn: string, endsOn: string) {
-  const durationInDays = Math.round(
-    (new Date(endsOn).getTime() - new Date(startsOn).getTime()) / 86_400_000,
-  );
-  const days = Math.max(1, durationInDays);
-  if (days >= 30) {
-    const months = Math.max(1, Math.round(days / 30));
-    return `${months} ${months === 1 ? "month" : "months"}`;
-  }
-  return `${days} ${days === 1 ? "day" : "days"}`;
+function membershipDuration(durationMonths: number) {
+  const months = Math.max(1, durationMonths || 1);
+  return `${months} ${months === 1 ? "month" : "months"}`;
+}
+
+function formatTableDate(date: string) {
+  return tableDate.format(new Date(`${date}T00:00:00.000Z`));
+}
+
+function assignedTrainers(member: Member) {
+  return [...new Set(member.memberships.flatMap((membership) => membership.trainers))];
 }
 
 function ThemeToggle() {
@@ -560,6 +574,7 @@ function AddMemberDialog({
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [query, setQuery] = useState("");
+  const [trainerFilter, setTrainerFilter] = useState("all");
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -634,13 +649,23 @@ export default function MembersPage() {
 
   const filteredMembers = useMemo(() => {
     const search = query.trim().toLowerCase();
-    if (!search) return members;
-    return members.filter((member) =>
-      `${member.fullName} ${member.memberships.map((membership) => membership.planTypeSnapshot).join(" ")}`
-        .toLowerCase()
-        .includes(search),
-    );
-  }, [members, query]);
+    return members.filter((member) => {
+      const matchesSearch = !search ||
+        `${member.fullName} ${member.memberships.map((membership) => membership.planTypeSnapshot).join(" ")}`
+          .toLowerCase()
+          .includes(search);
+      const trainers = member.memberships.flatMap((membership) => membership.trainers);
+      const matchesTrainer = trainerFilter === "all"
+        || trainerFilter === "unassigned" && trainers.length === 0
+        || trainers.includes(trainerFilter);
+      return matchesSearch && matchesTrainer;
+    });
+  }, [members, query, trainerFilter]);
+
+  const trainerOptions = useMemo(
+    () => [...new Set(members.flatMap((member) => member.memberships.flatMap((membership) => membership.trainers)))].sort(),
+    [members],
+  );
 
   const totals = useMemo(
     () => ({
@@ -656,18 +681,22 @@ export default function MembersPage() {
 
   function exportMembers() {
     const csv = [
-      "Client name,Active memberships,Membership status,Dues",
+      "Client name,Active memberships,Start date,End date,Total amount,Paid amount,Dues,Trainer assigned",
       ...filteredMembers.map((member) =>
         [
           member.fullName,
           member.memberships
             .map(
               (membership) =>
-                `${membership.planTypeSnapshot} · ${money.format(Number(membership.agreedFee))}`,
+                `${membership.planTypeSnapshot} · ${membershipDuration(membership.durationMonths)}`,
             )
             .join("; ") || "No active memberships",
-          member.memberships.map((membership) => membership.status).join("; ") || "—",
+          member.memberships.map((membership) => formatTableDate(membership.startsOn)).join("; ") || "—",
+          member.memberships.map((membership) => formatTableDate(membership.endsOn)).join("; ") || "—",
+          money.format(Number(member.totalAmount)),
+          money.format(Number(member.paidAmount)),
           money.format(Number(member.balance.totalOutstanding)),
+          assignedTrainers(member).join("; ") || "Unassigned",
         ]
           .map((value) => `"${value.replaceAll('"', '""')}"`)
           .join(","),
@@ -778,7 +807,7 @@ export default function MembersPage() {
                 <p>
                   {isLoading
                     ? "Loading members…"
-                    : query
+                    : query || trainerFilter !== "all"
                       ? `${filteredMembers.length} matching members`
                       : `${members.length} people in your community`}
                 </p>
@@ -787,6 +816,20 @@ export default function MembersPage() {
             <div className="member-toolbar">
               <div />
               <div className="member-tools">
+                <label className="member-filter-select">
+                  <Filter size={14} />
+                  <select
+                    aria-label="Filter members by trainer"
+                    value={trainerFilter}
+                    onChange={(event) => setTrainerFilter(event.target.value)}
+                  >
+                    <option value="all">All trainers</option>
+                    <option value="unassigned">Unassigned</option>
+                    {trainerOptions.map((trainer) => (
+                      <option key={trainer} value={trainer}>{trainer}</option>
+                    ))}
+                  </select>
+                </label>
                 <label className="member-search">
                   <Search size={15} />
                   <input
@@ -809,15 +852,19 @@ export default function MembersPage() {
                   <tr>
                     <th>Client name</th>
                     <th>Active memberships</th>
-                    <th>Membership status</th>
+                    <th>Start date</th>
+                    <th>End date</th>
+                    <th>Total amount</th>
+                    <th>Paid amount</th>
                     <th>Dues</th>
+                    <th>Trainer assigned</th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={9}>
                         <div className="member-empty" aria-live="polite">
                           <div>
                             <Spinner className="size-5" />
@@ -829,7 +876,7 @@ export default function MembersPage() {
                     </tr>
                   ) : error ? (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={9}>
                         <div className="member-empty">
                           <div>
                             <X size={20} />
@@ -859,12 +906,14 @@ export default function MembersPage() {
                         </td>
                         <td>
                           {member.memberships.length ? (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-col items-start gap-2">
                               {member.memberships.map((membership) => (
-                                <Badge key={membership.id} variant="outline">
-                                  {membership.planTypeSnapshot} <span aria-hidden>·</span>{" "}
-                                  {membershipDuration(membership.startsOn, membership.endsOn)}
-                                </Badge>
+                                <div className="flex items-center gap-2" key={membership.id}>
+                                  <Badge variant="outline">
+                                    {membership.planTypeSnapshot} <span aria-hidden>·</span>{" "}
+                                    {membershipDuration(membership.durationMonths)}
+                                  </Badge>
+                                </div>
                               ))}
                             </div>
                           ) : (
@@ -873,15 +922,35 @@ export default function MembersPage() {
                         </td>
                         <td>
                           {member.memberships.length ? (
-                            <div className="flex flex-col items-start gap-1">
-                              <Badge>{member.memberships.length} active</Badge>
-                              <span className="text-xs text-muted-foreground">
-                                All memberships current
-                              </span>
+                            <div className="flex flex-col items-start gap-2">
+                              {member.memberships.map((membership) => (
+                                <time dateTime={membership.startsOn} key={membership.id}>
+                                  {formatTableDate(membership.startsOn)}
+                                </time>
+                              ))}
                             </div>
                           ) : (
                             <span className="last-visit">—</span>
                           )}
+                        </td>
+                        <td>
+                          {member.memberships.length ? (
+                            <div className="flex flex-col items-start gap-2">
+                              {member.memberships.map((membership) => (
+                                <time dateTime={membership.endsOn} key={membership.id}>
+                                  {formatTableDate(membership.endsOn)}
+                                </time>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="last-visit">—</span>
+                          )}
+                        </td>
+                        <td>
+                          <strong className="text-sm">{money.format(Number(member.totalAmount))}</strong>
+                        </td>
+                        <td>
+                          <strong className="text-sm">{money.format(Number(member.paidAmount))}</strong>
                         </td>
                         <td>
                           <div className="flex flex-col gap-1">
@@ -893,8 +962,18 @@ export default function MembersPage() {
                             >
                               {money.format(Number(member.balance.totalOutstanding))}
                             </strong>
-                            <span className="text-xs text-muted-foreground">Total outstanding</span>
+                              <span className="text-xs text-muted-foreground">Total outstanding</span>
                           </div>
+                        </td>
+                        <td>
+                          {member.memberships.length ? (() => {
+                            const trainers = assignedTrainers(member);
+                            return trainers.length ? (
+                              <div className="flex flex-col items-start gap-2">
+                                {trainers.map((trainer) => <span key={trainer}>{trainer}</span>)}
+                              </div>
+                            ) : <span className="last-visit">Unassigned</span>;
+                          })() : <span className="last-visit">—</span>}
                         </td>
                         <td>
                           <button
@@ -910,7 +989,7 @@ export default function MembersPage() {
                   )}
                   {!filteredMembers.length && !isLoading && !error && (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={9}>
                         <div className="member-empty">
                           <div>
                             <Search size={20} />
