@@ -1,5 +1,10 @@
 import ManageShell from "../manage-shell";
+import Reports from "./reports";
 
 export default function ReportsPage() {
-  return <ManageShell view="Reports" />;
+  return (
+    <ManageShell>
+      <Reports />
+    </ManageShell>
+  );
 }
