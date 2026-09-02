@@ -10,11 +10,13 @@ import { useCallback, useEffect, useMemo, useState, type ElementType } from "rea
 import type { DateRange } from "react-day-picker";
 import DashboardSidebar from "./dashboard-sidebar";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { Input } from "@/components/ui/input";
 import MobileNavigation from "./mobile-navigation";
 import ProfileMenu from "./profile-menu";
 
 type PaymentStatus = "Paid" | "Refunded" | "Voided";
 type PaymentTab = "All" | PaymentStatus;
+type PaymentDatePreset = "1d" | "2d" | "3d" | "14d" | "30d" | "3m" | "6m" | "12m";
 
 type PaymentRecord = {
   id: string;
@@ -38,7 +40,41 @@ const paymentColors = ["violet", "blue", "amber", "pink", "green"];
 const initials = (fullName: string) => fullName.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
 const paymentStatusLabels = { SUCCEEDED: "Paid", REFUNDED: "Refunded", VOIDED: "Voided" } as const satisfies Record<PaymentRecord["status"], PaymentStatus>;
 const displayPaymentStatus = (status: PaymentRecord["status"]): PaymentStatus => paymentStatusLabels[status];
-const dateKey = (date: Date) => date.toISOString().slice(0, 10);
+const dateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const paymentDatePresets: { value: PaymentDatePreset; label: string; group: "Days" | "Months" }[] = [
+  { value: "1d", label: "Last 1 day", group: "Days" },
+  { value: "2d", label: "Last 2 days", group: "Days" },
+  { value: "3d", label: "Last 3 days", group: "Days" },
+  { value: "14d", label: "Last 14 days", group: "Days" },
+  { value: "30d", label: "Last 30 days", group: "Days" },
+  { value: "3m", label: "Last 3 months", group: "Months" },
+  { value: "6m", label: "Last 6 months", group: "Months" },
+  { value: "12m", label: "Last 12 months", group: "Months" },
+];
+
+function subtractMonths(date: Date, months: number) {
+  const result = new Date(date);
+  const day = result.getDate();
+  result.setDate(1);
+  result.setMonth(result.getMonth() - months);
+  const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, lastDay));
+  return result;
+}
+
+function dateRangeForPreset(preset: PaymentDatePreset): DateRange {
+  const to = new Date();
+  const amount = Number(preset.slice(0, -1));
+  const from = preset.endsWith("d") ? new Date(to) : subtractMonths(to, amount);
+  if (preset.endsWith("d")) from.setDate(from.getDate() - amount + 1);
+  return { from, to };
+}
 
 const money = (amount: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
 
@@ -73,7 +109,7 @@ function RevenueChart({ chart }: { chart: PaymentAnalytics["chart"] | null }) {
   const path = (values: number[]) => values.map((value, index) => `${index ? "L" : "M"}${values.length > 1 ? index / (values.length - 1) * width : width},${height - value / maximum * height}`).join(" ");
   const current = path(currentValues), previous = path(previousValues), lastY = height - (currentValues.at(-1) ?? 0) / maximum * height;
   const labels = (chart?.current ?? []).filter((_, index) => index % 3 === 0).map(point => new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" }).format(new Date(`${point.date}T00:00:00Z`)));
-  return <div className="revenue-chart" aria-label="Revenue chart"><div className="chart-axis"><span>{money(maximum)}</span><span>{money(maximum * 2 / 3)}</span><span>{money(maximum / 3)}</span><span>₹0</span></div><svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img"><defs><linearGradient id="revenueArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6f57e8" stopOpacity=".24" /><stop offset="100%" stopColor="#6f57e8" stopOpacity="0" /></linearGradient></defs>{[0, 63, 126, 189].map(y => <line key={y} x1="0" x2={width} y1={y} y2={y} className="payment-grid-line" />)}{current && <><path d={`${current} L${width},${height} L0,${height} Z`} fill="url(#revenueArea)" /><path d={current} className="revenue-line" /><circle cx={width} cy={lastY} r="7" className="revenue-dot-ring" /><circle cx={width} cy={lastY} r="3.5" className="revenue-dot" /></>}{previous && <path d={previous} className="previous-revenue-line" />}</svg><div className="chart-months">{labels.map(label => <span key={label}>{label}</span>)}</div><div className="chart-key"><span><i />This period</span><span><i />Previous period</span></div></div>;
+  return <div className="revenue-chart" aria-label="Revenue chart"><div className="chart-axis"><span>{money(maximum)}</span><span>{money(maximum * 2 / 3)}</span><span>{money(maximum / 3)}</span><span>₹0</span></div><svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img"><defs><linearGradient id="revenueArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6f57e8" stopOpacity=".24" /><stop offset="100%" stopColor="#6f57e8" stopOpacity="0" /></linearGradient></defs>{[0, 63, 126, 189].map(y => <line key={y} x1="0" x2={width} y1={y} y2={y} className="payment-grid-line" />)}{current && <><path d={`${current} L${width},${height} L0,${height} Z`} fill="url(#revenueArea)" /><path d={current} className="revenue-line" /><circle cx={width} cy={lastY} r="7" className="revenue-dot-ring" /><circle cx={width} cy={lastY} r="3.5" className="revenue-dot" /></>}{previous && <path d={previous} className="previous-revenue-line" />}</svg><div className="chart-months">{labels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div><div className="chart-key"><span><i />This period</span><span><i />Previous period</span></div></div>;
 }
 
 type PaymentMember = { id: string; fullName: string };
@@ -82,13 +118,49 @@ type PaymentRecipientOption = { id: string; displayName: string; recipientType: 
 type ChargeOption = { id: string; amount: string; paidAmount: string; outstandingAmount: string; dueOn: string };
 type PaymentContext = { memberships: { id: string; planName: string; charges: ChargeOption[] }[] };
 
+function MemberPicker({ members, value, onChange, disabled, loading }: { members: PaymentMember[]; value: string; onChange: (memberId: string) => void; disabled: boolean; loading: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedMember = members.find(member => member.id === value);
+  const filteredMembers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return normalizedQuery ? members.filter(member => member.fullName.toLowerCase().includes(normalizedQuery)) : members;
+  }, [members, query]);
+
+  return <div className="member-picker">
+    <Input
+      type="search"
+      value={query || selectedMember?.fullName || ""}
+      onChange={event => { setQuery(event.target.value); setOpen(true); }}
+      onFocus={() => { if (selectedMember && !query) setQuery(""); setOpen(true); }}
+      onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+      onKeyDown={event => { if (event.key === "Escape") setOpen(false); }}
+      placeholder={loading ? "Loading members…" : "Search members"}
+      disabled={disabled}
+      aria-label="Search members"
+      aria-expanded={open}
+      aria-controls="member-suggestions"
+      role="combobox"
+      autoComplete="off"
+    />
+    {open && !disabled && <div id="member-suggestions" role="listbox" aria-label="Members" className="member-picker-suggestions">
+      {filteredMembers.length ? filteredMembers.map(member => <button
+        type="button"
+        role="option"
+        aria-selected={member.id === value}
+        key={member.id}
+        onMouseDown={event => { event.preventDefault(); onChange(member.id); setQuery(""); setOpen(false); }}
+      >{member.fullName}</button>) : <p>No matching members</p>}
+    </div>}
+  </div>;
+}
+
 function RecordModal({ close, notify, onRecorded }: { close: () => void; notify: (message: string) => void; onRecorded: () => Promise<void> }) {
   const [members, setMembers] = useState<PaymentMember[]>([]), [paymentModes, setPaymentModes] = useState<PaymentModeOption[]>([]), [recipients, setRecipients] = useState<PaymentRecipientOption[]>([]);
   const [memberId, setMemberId] = useState(""), [context, setContext] = useState<PaymentContext | null>(null), [selectedCharge, setSelectedCharge] = useState(""), [amount, setAmount] = useState(""), [paymentModeId, setPaymentModeId] = useState(""), [recipientId, setRecipientId] = useState(""), [reference, setReference] = useState(""), [paidOn, setPaidOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(true), [submitting, setSubmitting] = useState(false), [error, setError] = useState("");
 
   const charges = context?.memberships.flatMap(membership => membership.charges.map(charge => ({ ...charge, membershipId: membership.id, planName: membership.planName }))) ?? [];
-
   useEffect(() => {
     let cancelled = false;
 
@@ -174,11 +246,11 @@ function RecordModal({ close, notify, onRecorded }: { close: () => void; notify:
     }
   }
 
-  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="record-title" onMouseDown={event => event.currentTarget === event.target && close()}><form className="modal payment-modal" onSubmit={submitPayment}><div className="modal-header"><div><h2 id="record-title">Record a payment</h2><p>Add an offline or manual member payment.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close"><X size={18} /></button></div><label>Member<select required autoFocus value={memberId} onChange={event => void selectMember(event.target.value)} disabled={loading || submitting}><option value="" disabled>{loading ? "Loading members…" : "Select member"}</option>{members.map(member => <option value={member.id} key={member.id}>{member.fullName}</option>)}</select></label><label>Membership due<select required value={selectedCharge} onChange={event => setSelectedCharge(event.target.value)} disabled={!memberId || submitting}><option value="" disabled>Select a due</option>{charges.map(charge => <option value={`${charge.membershipId}:${charge.id}`} key={charge.id}>{charge.planName} · ₹{charge.outstandingAmount} due · {charge.dueOn}</option>)}</select></label><div className="form-row"><label>Amount<input required type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} placeholder="₹ 0" disabled={submitting} /></label><label>Payment method<select value={paymentModeId} onChange={event => setPaymentModeId(event.target.value)} required disabled={loading || submitting}><option value="" disabled>Select method</option>{paymentModes.map(mode => <option value={mode.id} key={mode.id}>{mode.name}</option>)}</select></label></div><label>Recipient<select value={recipientId} onChange={event => setRecipientId(event.target.value)} required disabled={loading || submitting}><option value="" disabled>Select recipient</option>{recipients.map(recipient => <option value={recipient.id} key={recipient.id}>{recipient.displayName} ({recipient.recipientType})</option>)}</select></label><label>Payment note <span>Optional</span><input value={reference} onChange={event => setReference(event.target.value)} placeholder="e.g. August membership fee" disabled={submitting} /></label><label>Paid on<input required type="date" value={paidOn} onChange={event => setPaidOn(event.target.value)} disabled={submitting} /></label>{error && <p role="alert">{error}</p>}<div className="secure-note"><ShieldCheck size={15} /> This payment will be added to the member ledger.</div><div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={submitting}>Cancel</button><button className="button primary" type="submit" disabled={loading || submitting || !selectedCharge}><Check size={16} /> {submitting ? "Recording…" : "Record payment"}</button></div></form></div>;
+  return <div className="modal-layer" role="dialog" aria-modal="true" aria-labelledby="record-title" onMouseDown={event => event.currentTarget === event.target && close()}><form className="modal payment-modal" onSubmit={submitPayment}><div className="modal-header"><div><h2 id="record-title">Record a payment</h2><p>Add an offline or manual member payment.</p></div><button type="button" className="icon-button" onClick={close} aria-label="Close"><X size={18} /></button></div><label>Member<MemberPicker members={members} value={memberId} onChange={nextMemberId => void selectMember(nextMemberId)} disabled={loading || submitting} loading={loading} /></label><label>Membership due<select required value={selectedCharge} onChange={event => setSelectedCharge(event.target.value)} disabled={!memberId || submitting}><option value="" disabled>Select a due</option>{charges.map(charge => <option value={`${charge.membershipId}:${charge.id}`} key={charge.id}>{charge.planName} · ₹{charge.outstandingAmount} due · {charge.dueOn}</option>)}</select></label><div className="form-row"><label>Amount<input required type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} placeholder="₹ 0" disabled={submitting} /></label><label>Payment method<select value={paymentModeId} onChange={event => setPaymentModeId(event.target.value)} required disabled={loading || submitting}><option value="" disabled>Select method</option>{paymentModes.map(mode => <option value={mode.id} key={mode.id}>{mode.name}</option>)}</select></label></div><label>Recipient<select value={recipientId} onChange={event => setRecipientId(event.target.value)} required disabled={loading || submitting}><option value="" disabled>Select recipient</option>{recipients.map(recipient => <option value={recipient.id} key={recipient.id}>{recipient.displayName} ({recipient.recipientType})</option>)}</select></label><label>Payment note <span>Optional</span><input value={reference} onChange={event => setReference(event.target.value)} placeholder="e.g. August membership fee" disabled={submitting} /></label><label>Paid on<input required type="date" value={paidOn} onChange={event => setPaidOn(event.target.value)} disabled={submitting} /></label>{error && <p role="alert">{error}</p>}<div className="secure-note"><ShieldCheck size={15} /> This payment will be added to the member ledger.</div><div className="modal-actions"><button type="button" className="button secondary" onClick={close} disabled={submitting}>Cancel</button><button className="button primary" type="submit" disabled={loading || submitting || !selectedCharge}><Check size={16} /> {submitting ? "Recording…" : "Record payment"}</button></div></form></div>;
 }
 
 export default function PaymentsPage() {
-  const [dateRange, setDateRange] = useState<DateRange>(() => { const to = new Date(); return { from: new Date(to.getFullYear(), to.getMonth(), 1), to }; }), [tab, setTab] = useState<PaymentTab>("All"), [query, setQuery] = useState(""), [mobileNav, setMobileNav] = useState(false), [modal, setModal] = useState(false), [toast, setToast] = useState(""), [payments, setPayments] = useState<PaymentRecord[]>([]), [paymentsError, setPaymentsError] = useState(""), [paymentsLoading, setPaymentsLoading] = useState(true), [analytics, setAnalytics] = useState<PaymentAnalytics | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(() => { const to = new Date(); return { from: new Date(to.getFullYear(), to.getMonth(), 1), to }; }), [datePreset, setDatePreset] = useState<PaymentDatePreset | null>(null), [filterOpen, setFilterOpen] = useState(false), [tab, setTab] = useState<PaymentTab>("All"), [query, setQuery] = useState(""), [mobileNav, setMobileNav] = useState(false), [modal, setModal] = useState(false), [toast, setToast] = useState(""), [payments, setPayments] = useState<PaymentRecord[]>([]), [paymentsError, setPaymentsError] = useState(""), [paymentsLoading, setPaymentsLoading] = useState(true), [analytics, setAnalytics] = useState<PaymentAnalytics | null>(null);
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2600); };
   const loadPayments = useCallback(async () => {
     setPaymentsLoading(true);
@@ -227,14 +299,24 @@ export default function PaymentsPage() {
     return total;
   }, { All: 0, Paid: 0, Refunded: 0, Voided: 0 });
   const refreshPaymentData = useCallback(async () => { await Promise.all([loadPayments(), loadAnalytics()]); }, [loadAnalytics, loadPayments]);
+  function applyDatePreset(preset: PaymentDatePreset) {
+    setDatePreset(preset);
+    setDateRange(dateRangeForPreset(preset));
+    setFilterOpen(false);
+  }
+  function applyCustomDateRange(range: DateRange | undefined) {
+    if (!range) return;
+    setDatePreset(null);
+    setDateRange(range);
+  }
   const summary = analytics?.summary;
   function exportPayments() { const rows = payments.map(payment => [payment.id, payment.member.fullName, payment.membership?.planName ?? "", payment.paidOn, payment.paymentMode.name, payment.amount, displayPaymentStatus(payment.status)].join(",")); const url = URL.createObjectURL(new Blob([["Payment ID,Member,Plan,Date,Method,Amount,Status", ...rows].join("\n")], { type: "text/csv" })); const link = document.createElement("a"); link.href = url; link.download = "gymwise-payments.csv"; link.click(); URL.revokeObjectURL(url); notify("Payments exported successfully"); }
 
   return <div className="app-shell"><DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} /><div className="app-content"><Header onMenu={() => setMobileNav(true)} notify={notify} /><main className="dashboard payments-dashboard">
-    <div className="page-heading payments-heading"><div><h1>Payments</h1><p>Track collections, settlements, and member transactions.</p></div><div className="heading-actions"><DateRangePicker value={dateRange} onChange={range => setDateRange(range ?? dateRange)} /><button className="button secondary export-button" onClick={exportPayments}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModal(true)}><Plus size={17} /> Record payment</button></div></div>
+    <div className="page-heading payments-heading"><div><h1>Payments</h1><p>Track collections, settlements, and member transactions.</p></div><div className="heading-actions"><DateRangePicker value={dateRange} onChange={applyCustomDateRange} /><button className="button secondary export-button" onClick={exportPayments}><Download size={16} /> Export</button><button className="button primary" onClick={() => setModal(true)}><Plus size={17} /> Record payment</button></div></div>
     <section className="kpi-grid" aria-label="Payment summary"><Stat icon={IndianRupee} tone="purple" label="Total collected" value={summary ? money(Number(summary.totalCollected)) : "—"} change={summary?.totalCollectedChange ? `${Number(summary.totalCollectedChange) >= 0 ? "+" : ""}${summary.totalCollectedChange}%` : undefined} detail={summary ? `Across ${summary.successfulPaymentCount} successful payments` : "Loading collections…"} /><Stat icon={ReceiptText} tone="blue" label="Pending amount" value={summary ? money(Number(summary.outstandingAmount)) : "—"} detail="Open membership dues" /><Stat icon={RefreshCw} tone="amber" label="Voided payments" value={summary ? money(Number(summary.voidedAmount)) : "—"} detail={summary ? `${summary.voidedPaymentCount} voided payments this period` : "Loading payment status…"} /><Stat icon={TrendingUp} tone="green" label="Collection rate" value={summary ? `${summary.collectionRate}%` : "—"} detail="Collected against outstanding dues" /></section>
     <section className="payments-overview-grid"><article className="panel revenue-panel"><div className="payment-card-header"><div><h2>Collection overview</h2><p>Revenue received across all payment methods</p></div><div className="revenue-summary"><div><small>Total collected</small><strong>{summary ? money(Number(summary.totalCollected)) : "—"}</strong></div>{summary?.totalCollectedChange && <span><ArrowUpRight size={13} /> {summary.totalCollectedChange}%</span>}</div></div><RevenueChart chart={analytics?.chart ?? null} /></article><div className="payments-side"><article className="settlement-card"><div className="settlement-top"><span><ArrowUpRight size={18} /></span><div><small>Collection snapshot</small><strong>{summary ? money(Number(summary.totalCollected)) : "—"}</strong></div><em>{analytics ? "Live data" : "Loading"}</em></div><div className="settlement-meta"><div><span>Successful payments</span><strong>{summary?.successfulPaymentCount ?? "—"}</strong></div><div><span>Collection rate</span><strong>{summary ? `${summary.collectionRate}%` : "—"}</strong></div></div><button onClick={() => document.getElementById("payment-transactions")?.scrollIntoView({ behavior: "smooth", block: "start" })}>View transactions <ArrowRight size={14} /></button></article><article className="panel methods-panel"><div className="payment-card-header compact"><div><h2>Payment methods</h2><p>Share of collections this period</p></div><button className="icon-button small" onClick={() => void loadAnalytics()}><MoreHorizontal size={18} /></button></div><div className="method-content"><div className="donut"><div><strong>{summary?.successfulPaymentCount ?? "—"}</strong><span>payments</span></div></div><div className="method-list">{(analytics?.paymentMethods ?? []).map((method, index) => <div className="method-row" key={method.id}><i className={paymentColors[index % paymentColors.length]} /><span>{method.name}</span><strong>{method.share}%</strong><small>{money(Number(method.amount))}</small></div>)}</div></div></article></div></section>
-    <article id="payment-transactions" className="panel transactions-panel"><div className="transactions-header"><div><h2>Recent transactions</h2><p>Track and manage every member payment</p></div><button className="text-button" onClick={() => void loadPayments()} disabled={paymentsLoading}>Refresh <ArrowRight size={14} /></button></div><div className="transaction-toolbar"><div className="payment-tabs">{(["All", "Paid", "Refunded", "Voided"] as PaymentTab[]).map(item => <button key={item} onClick={() => setTab(item)} className={tab === item ? "selected" : ""}>{item}<span>{counts[item]}</span></button>)}</div><div className="transaction-tools"><label className="transaction-search"><Search size={15} /><input id="payment-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search payments" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button>}</label><button className="icon-button table-filter" onClick={() => notify("Advanced filters opened")}><Filter size={16} /></button></div></div><div className="payments-table-wrap"><table className="payments-table"><thead><tr><th>Member</th><th>Date</th><th>Method</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>{paymentsLoading ? <tr><td colSpan={6}><div className="payment-empty"><LoaderCircle size={25} className="animate-spin" /><strong>Loading payments</strong><span>Fetching recent transactions…</span></div></td></tr> : <>{visible.map((payment, index) => { const status = displayPaymentStatus(payment.status); return <tr key={payment.id} onClick={() => notify(`${payment.id} details opened`)}><td><div className="member-cell"><span className={`avatar ${paymentColors[index % paymentColors.length]}`}>{initials(payment.member.fullName)}</span><div><strong>{payment.member.fullName}</strong><small>{payment.membership?.planName ?? "Unallocated payment"}</small></div></div></td><td><span className="payment-date">{payment.paidOn}</span></td><td><span className="payment-method">{payment.paymentMode.name === "UPI" ? <Zap size={13} /> : payment.paymentMode.name === "Cash" ? <IndianRupee size={13} /> : <FileText size={13} />}{payment.paymentMode.name}</span></td><td><strong className="amount-cell">{money(Number(payment.amount))}</strong></td><td><span className={`status-pill ${status.toLowerCase()}`}><i />{status}</span></td><td><button className="icon-button small" onClick={event => { event.stopPropagation(); notify(`Actions opened for ${payment.id}`); }}><MoreHorizontal size={17} /></button></td></tr>; })}{visible.length === 0 && <tr><td colSpan={6}><div className="payment-empty"><ReceiptText size={25} /><strong>{paymentsError ? "Could not load payments" : "No payments found"}</strong><span>{paymentsError || "Try a different search or status."}</span><button onClick={() => { setQuery(""); setTab("All"); void loadPayments(); }}>Refresh</button></div></td></tr>}</>}</tbody></table></div><div className="table-footer"><span>Showing {visible.length} of {payments.length} transactions</span></div></article>
+    <article id="payment-transactions" className="panel transactions-panel"><div className="transactions-header"><div><h2>Recent transactions</h2><p>Track and manage every member payment</p></div><button className="text-button" onClick={() => void loadPayments()} disabled={paymentsLoading}>Refresh <ArrowRight size={14} /></button></div><div className="transaction-toolbar"><div className="payment-tabs">{(["All", "Paid", "Refunded", "Voided"] as PaymentTab[]).map(item => <button key={item} onClick={() => setTab(item)} className={tab === item ? "selected" : ""}>{item}<span>{counts[item]}</span></button>)}</div><div className="transaction-tools"><label className="transaction-search"><Search size={15} /><input id="payment-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search payments" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={13} /></button>}</label><div className="payment-filter-wrap"><button className={`icon-button table-filter${filterOpen || datePreset ? " active" : ""}`} onClick={() => setFilterOpen(open => !open)} aria-label="Filter payments by date" aria-expanded={filterOpen}><Filter size={16} /></button>{filterOpen && <div className="payment-filter-menu" role="menu" aria-label="Payment date filters"><strong>Payment date</strong>{(["Days", "Months"] as const).map(group => <div key={group} className="payment-filter-group"><span>{group}</span>{paymentDatePresets.filter(preset => preset.group === group).map(preset => <button key={preset.value} role="menuitemradio" aria-checked={datePreset === preset.value} className={datePreset === preset.value ? "selected" : ""} onClick={() => applyDatePreset(preset.value)}>{preset.label}</button>)}</div>)}</div>}</div></div></div><div className="payments-table-wrap"><table className="payments-table"><thead><tr><th>Member</th><th>Date</th><th>Method</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>{paymentsLoading ? <tr><td colSpan={6}><div className="payment-empty"><LoaderCircle size={25} className="animate-spin" /><strong>Loading payments</strong><span>Fetching recent transactions…</span></div></td></tr> : <>{visible.map((payment, index) => { const status = displayPaymentStatus(payment.status); return <tr key={payment.id} onClick={() => notify(`${payment.id} details opened`)}><td><div className="member-cell"><span className={`avatar ${paymentColors[index % paymentColors.length]}`}>{initials(payment.member.fullName)}</span><div><strong>{payment.member.fullName}</strong><small>{payment.membership?.planName ?? "Unallocated payment"}</small></div></div></td><td><span className="payment-date">{payment.paidOn}</span></td><td><span className="payment-method">{payment.paymentMode.name === "UPI" ? <Zap size={13} /> : payment.paymentMode.name === "Cash" ? <IndianRupee size={13} /> : <FileText size={13} />}{payment.paymentMode.name}</span></td><td><strong className="amount-cell">{money(Number(payment.amount))}</strong></td><td><span className={`status-pill ${status.toLowerCase()}`}><i />{status}</span></td><td><button className="icon-button small" onClick={event => { event.stopPropagation(); notify(`Actions opened for ${payment.id}`); }}><MoreHorizontal size={17} /></button></td></tr>; })}{visible.length === 0 && <tr><td colSpan={6}><div className="payment-empty"><ReceiptText size={25} /><strong>{paymentsError ? "Could not load payments" : "No payments found"}</strong><span>{paymentsError || "Try a different search or status."}</span><button onClick={() => { setQuery(""); setTab("All"); void loadPayments(); }}>Refresh</button></div></td></tr>}</>}</tbody></table></div><div className="table-footer"><span>Showing {visible.length} of {payments.length} transactions</span></div></article>
     <footer className="dashboard-footer"><span>Last updated a few seconds ago</span><span><ShieldCheck size={14} /> Payments are encrypted and securely processed</span></footer>
   </main></div><MobileNavigation active="payments" onNotify={notify} onAdd={() => setModal(true)} />{modal && <RecordModal close={() => setModal(false)} notify={notify} onRecorded={refreshPaymentData} />}{toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}</div>;
 }

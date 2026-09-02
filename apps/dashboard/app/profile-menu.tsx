@@ -36,7 +36,7 @@ export default function ProfileMenu({ name, initials, role, onNotify }: ProfileM
     <DropdownMenuContent align="end" className="min-w-52">
       <DropdownMenuGroup>
         <DropdownMenuLabel>{name}</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={() => onNotify("Settings opened")}><Settings />Settings</DropdownMenuItem>
+        {/*<DropdownMenuItem onSelect={() => onNotify("Settings opened")}><Settings />Settings</DropdownMenuItem>*/}
         <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}><LogOut />Sign out</DropdownMenuItem>
       </DropdownMenuGroup>
     </DropdownMenuContent>

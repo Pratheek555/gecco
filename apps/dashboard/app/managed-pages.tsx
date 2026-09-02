@@ -63,6 +63,23 @@ type MembershipRecord = {
   plan: { id: string; name: string; code: string };
   trainerAssignments: { trainer: { id: string; fullName: string } }[];
 };
+type MembershipSummary = {
+  activeMemberships: number;
+  activeMembers: number;
+  monthlyRecurringRevenue: string;
+  renewingThisMonth: number;
+  renewalValueAtRisk: string;
+  collectionRate: string;
+  outstandingAmount: string;
+  overdueMembers: number;
+  newMemberships: number;
+  cancelledMemberships: number;
+  netGrowth: number;
+  trainerCoverage: string;
+  averageMembershipValue: string;
+  totalCollected: string;
+  totalCollectedChange: string | null;
+};
 type PlanCard = {
   id: string;
   code: string;
@@ -157,8 +174,8 @@ function PageHeader({ eyebrow, title, copy, action, icon: Icon = Plus, onAction,
   return <div className="page-heading managed-heading"><div><p className="managed-breadcrumb" title={eyebrow}>{parent} <ChevronRight size={12} /> {title}</p><h1>{title}</h1><p>{copy}</p></div><div className="heading-actions">{secondaryAction && <button className="button secondary" onClick={onSecondaryAction}><UserPlus size={16} />{secondaryAction}</button>}<button className="button primary" onClick={onAction}><Icon size={16} />{action}</button></div></div>;
 }
 
-function SummaryCard({ icon: Icon, tone, label, value, detail }: { icon: LucideIcon; tone: string; label: string; value: string; detail: string }) {
-  return <article className="managed-stat"><span className={`managed-stat-icon ${tone}`}><Icon size={18} /></span><div><small>{label}</small><strong>{value}</strong><em>{detail}</em></div></article>;
+function SummaryCard({ icon: Icon, tone, label, value, detail, loading = false }: { icon: LucideIcon; tone: string; label: string; value: string; detail: string; loading?: boolean }) {
+  return <article className="managed-stat"><span className={`managed-stat-icon ${tone}`}><Icon size={18} /></span><div><small>{label}</small><strong>{loading ? <LoaderCircle className="plan-spinner" size={16} /> : value}</strong><em>{detail}</em></div></article>;
 }
 
 function SummaryGrid({ children }: { children: React.ReactNode }) {
@@ -280,6 +297,9 @@ function Memberships({ notify }: { notify: Notify }) {
   const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
   const [membershipsLoading, setMembershipsLoading] = useState(true);
   const [membershipsError, setMembershipsError] = useState("");
+  const [summary, setSummary] = useState<MembershipSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
   const [isAddPlanOpen, setIsAddPlanOpen] = useState(false);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
   const visible = useMemo(() => items.filter((plan) => (filter === "All" || plan.state === filter) && `${plan.name} ${plan.detail}`.toLowerCase().includes(query.toLowerCase())), [filter, items, query]);
@@ -294,6 +314,17 @@ function Memberships({ notify }: { notify: Notify }) {
   })(); }, []);
   useEffect(() => { void (async () => {
     try {
+      const response = await fetch("/api/memberships/summary");
+      const data = await readJson<{ summary?: MembershipSummary; error?: string }>(response);
+      if (!response.ok || !data.summary) throw new Error(data.error ?? "Could not load membership insights.");
+      setSummary(data.summary);
+    } catch (reason) { setSummaryError(reason instanceof Error ? reason.message : "Could not load membership insights."); }
+    finally { setSummaryLoading(false); }
+  })(); }, []);
+  const summaryMoney = (value: string | number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(value));
+  const summaryValue = (value: string) => summaryLoading ? "—" : summaryError ? "—" : value;
+  useEffect(() => { void (async () => {
+    try {
       const response = await fetch("/api/memberships");
       const data = await response.json() as { memberships?: MembershipRecord[]; error?: string };
       if (!response.ok || !data.memberships) throw new Error(data.error ?? "Could not load active memberships.");
@@ -304,10 +335,10 @@ function Memberships({ notify }: { notify: Notify }) {
   return <>
     <PageHeader eyebrow="MEMBERSHIP MANAGEMENT" title="Memberships" copy="Create plans, track adoption, and stay ahead of upcoming renewals." action="Create plan" onAction={() => setIsAddPlanOpen(true)} secondaryAction="Assign plan" onSecondaryAction={() => setIsAssignPlanOpen(true)} />
     <SummaryGrid>
-      <SummaryCard icon={Users} tone="purple" label="Active memberships" value="1,284" detail="+4.8% from last month" />
-      <SummaryCard icon={WalletCards} tone="green" label="Recurring revenue" value="₹12.8L" detail="₹97K above last month" />
-      <SummaryCard icon={CalendarDays} tone="blue" label="Renewing this month" value="164" detail="82% set to auto-renew" />
-      <SummaryCard icon={TrendingUp} tone="amber" label="Average plan value" value="₹2,642" detail="+6.2% over 90 days" />
+      <SummaryCard loading={summaryLoading} icon={Users} tone="purple" label="Active memberships" value={summary ? String(summary.activeMemberships) : summaryValue("")} detail={summary ? `${summary.activeMembers} members · ${summary.netGrowth >= 0 ? "+" : ""}${summary.netGrowth} net this month` : "Loading membership totals…"} />
+      <SummaryCard loading={summaryLoading} icon={WalletCards} tone="green" label="Monthly recurring revenue" value={summary ? summaryMoney(summary.monthlyRecurringRevenue) : summaryValue("")} detail={summary?.totalCollectedChange ? `${Number(summary.totalCollectedChange) >= 0 ? "+" : ""}${summary.totalCollectedChange}% collected vs last month` : summary ? `${summaryMoney(summary.totalCollected)} collected this month` : "Loading revenue…"} />
+      <SummaryCard loading={summaryLoading} icon={CalendarDays} tone="blue" label="Renewing this month" value={summary ? String(summary.renewingThisMonth) : summaryValue("")} detail={summary ? `${summaryMoney(summary.renewalValueAtRisk)} value at risk` : "Loading renewals…"} />
+      <SummaryCard loading={summaryLoading} icon={TrendingUp} tone="amber" label="Average membership value" value={summary ? summaryMoney(summary.averageMembershipValue) : summaryValue("")} detail={summary ? `${summary.collectionRate}% collection rate · ${summary.overdueMembers} overdue` : "Loading plan value…"} />
     </SummaryGrid>
     <Toolbar query={query} setQuery={setQuery} placeholder="Search membership plans"><Tab active={filter === "All"} onClick={() => setFilter("All")}>All</Tab><Tab active={filter === "Active"} onClick={() => setFilter("Active")}>Active</Tab><Tab active={filter === "Archived"} onClick={() => setFilter("Archived")}>Archived</Tab></Toolbar>
     <section className="plan-grid">{loading ? <LoadingPlans /> : loadError ? <Empty icon={CreditCard} label={loadError} /> : visible.map((plan) => <article className="panel plan-card" key={plan.id}>
