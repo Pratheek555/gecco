@@ -16,6 +16,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const navigation = [
   {
@@ -49,22 +50,84 @@ type DashboardSidebarProps = {
   onNotify: (message: string) => void;
 };
 
+type GymOption = { id: string; name: string; timezone: string; role: string };
+type SessionResponse = { gyms: GymOption[]; activeGym: GymOption };
+
+let sessionCache: SessionResponse | null | undefined;
+let sessionRequest: Promise<SessionResponse | null> | null = null;
+
+function getSessionOnce() {
+  if (sessionCache !== undefined) return Promise.resolve(sessionCache);
+  if (!sessionRequest) {
+    sessionRequest = fetch("/api/session")
+      .then(response => response.ok ? response.json() as Promise<SessionResponse> : null)
+      .then(data => { sessionCache = data; return data; })
+      .catch(() => { sessionRequest = null; return null; });
+  }
+  return sessionRequest;
+}
+
+function updateCachedActiveGym(activeGym: GymOption) {
+  if (!sessionCache) return null;
+  sessionCache = { ...sessionCache, activeGym };
+  return sessionCache;
+}
+
 export { Brand };
 
 export default function DashboardSidebar({ open, onClose, onNotify }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [session, setSession] = useState<SessionResponse | null>(null);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [switchingGymId, setSwitchingGymId] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void getSessionOnce().then(data => { if (!cancelled && data) setSession(data); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function switchGym(gym: GymOption) {
+    if (!session || gym.id === session.activeGym.id) {
+      setSwitcherOpen(false);
+      return;
+    }
+
+    setSwitchingGymId(gym.id);
+    try {
+      const response = await fetch("/api/session/gym", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gymId: gym.id }),
+      });
+      const data = await response.json() as { activeGym?: GymOption; error?: string };
+      if (!response.ok || !data.activeGym) throw new Error(data.error ?? "Could not switch gym.");
+
+      const nextSession = updateCachedActiveGym(data.activeGym!);
+      setSession(nextSession);
+      setSwitcherOpen(false);
+      onNotify(`Switched to ${data.activeGym.name}`);
+      router.refresh();
+      window.location.reload();
+    } catch (error) {
+      onNotify(error instanceof Error ? error.message : "Could not switch gym.");
+    } finally {
+      setSwitchingGymId("");
+    }
+  }
 
   function signOut() {
     onClose();
     router.replace("/login");
   }
 
+  const activeGym = session?.activeGym;
   return <>
     {open && <button className="sidebar-scrim" aria-label="Close navigation" onClick={onClose} />}
     <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
       <div className="sidebar-top"><Brand /><button className="icon-button sidebar-close" onClick={onClose} aria-label="Close navigation"><X size={18} /></button></div>
-      <button className="location-switcher" onClick={() => onNotify("Location switcher opened")}><span className="location-icon"><Dumbbell size={17} /></span><span><strong>Pulse Fitness</strong><small>South Delhi</small></span><ChevronDown size={15} /></button>
+      <div className="location-switcher-wrap"><button className="location-switcher" onClick={() => setSwitcherOpen(current => !current)} aria-expanded={switcherOpen} aria-haspopup="listbox"><span className="location-icon"><Dumbbell size={17} /></span><span><strong>{activeGym?.name ?? "Loading gym…"}</strong><small>{activeGym?.timezone ?? "Loading current gym"}</small></span><ChevronDown size={15} /></button>{switcherOpen && <div className="gym-switcher-menu" role="listbox" aria-label="Choose gym">{session?.gyms.map(gym => <button key={gym.id} role="option" aria-selected={gym.id === activeGym?.id} className={gym.id === activeGym?.id ? "selected" : ""} disabled={Boolean(switchingGymId)} onClick={() => void switchGym(gym)}><span><strong>{gym.name}</strong><small>{gym.timezone}</small></span>{switchingGymId === gym.id ? <span className="gym-switcher-spinner" aria-label="Switching" /> : gym.id === activeGym?.id ? <span className="gym-switcher-check">✓</span> : null}</button>)}{session && session.gyms.length === 0 && <p>No active gyms available.</p>}{!session && <p>Loading gyms…</p>}</div>}</div>
       <nav className="main-nav" aria-label="Primary navigation">
         {navigation.map((group) => <div className="nav-group" key={group.label}>
           <div className="nav-label">{group.label}</div>
