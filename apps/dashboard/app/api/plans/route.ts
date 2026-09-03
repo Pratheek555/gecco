@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -44,8 +44,9 @@ function parseDurationMonths(value: unknown) {
 }
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("plans:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const plans = await prisma.plan.findMany({
     where: { gymId: session.activeGym.id },
@@ -57,8 +58,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("plans:manage");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   let body: CreatePlanBody;
   try {

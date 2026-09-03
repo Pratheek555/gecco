@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -33,8 +33,9 @@ function parseFee(value: unknown) {
 }
 
 export async function POST(request: Request, context: RouteContext<"/api/members/[memberid]/memberships">) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("memberships:write");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const { memberid: memberId } = await context.params;
 

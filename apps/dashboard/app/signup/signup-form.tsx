@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./signup.module.css";
 
 type FormValues = {
@@ -22,6 +23,7 @@ const initialValues: FormValues = {
 };
 
 export default function SignupForm() {
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [values, setValues] = useState(initialValues);
   const [error, setError] = useState("");
@@ -78,7 +80,7 @@ export default function SignupForm() {
         return;
       }
 
-      window.location.assign("/dashboard");
+      router.push("/dashboard");
     } catch {
       setError("We could not reach Gecco. Check your connection and try again.");
     } finally {

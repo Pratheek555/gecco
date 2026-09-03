@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -38,8 +38,9 @@ function monthBoundaries(key: string) {
 }
 
 export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("overview:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const requestedWindow = Number(new URL(request.url).searchParams.get("days") ?? "7");
   const days = validWindows.find((candidate) => candidate === requestedWindow);

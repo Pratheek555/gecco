@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -16,8 +16,9 @@ async function getScopedMember(memberId: string, gymId: string) {
 }
 
 export async function GET(_request: Request, context: RouteContext<"/api/members/[memberid]">) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("members:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const { memberid: memberId } = await context.params;
   const gymId = session.activeGym.id;
@@ -87,8 +88,9 @@ export async function GET(_request: Request, context: RouteContext<"/api/members
 }
 
 export async function POST(request: Request, context: RouteContext<"/api/members/[memberid]">) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("members:write");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const { memberid: memberId } = await context.params;
   let payload: CreateRemarkBody;

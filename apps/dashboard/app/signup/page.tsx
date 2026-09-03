@@ -1,5 +1,6 @@
 import SignupForm from "./signup-form";
 import styles from "./signup.module.css";
+import Link from "next/link";
 
 export const metadata = {
   title: "Create your gym workspace | Gecco",
@@ -10,10 +11,10 @@ export default function SignupPage() {
   return (
     <main className={styles.page}>
       <section className={styles.intro}>
-        <a className={styles.brand} href="/">
+        <Link className={styles.brand} href="/">
           <span className={styles.brandMark}>↗</span>
           Gecco
-        </a>
+        </Link>
         <div className={styles.introContent}>
           <span className={styles.eyebrow}>Gym management, made simple</span>
           <h1>Build a better routine for your business.</h1>

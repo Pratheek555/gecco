@@ -12,6 +12,7 @@
     "dev:dashboard": "turbo dev --filter=@gecco/dashboard",
     "build": "turbo build",
     "lint": "turbo lint",
+    "test": "turbo test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
