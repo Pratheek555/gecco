@@ -1,6 +1,7 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/app/api/auth/authorization";
+import { revenueByMonth, trailingMonthKeys } from "@/app/lib/trainer-revenue";
 
 type CreateTrainerBody = {
   fullName?: unknown;
@@ -13,72 +14,32 @@ type TrainerAssignment = {
   membership: {
     memberId: string;
     status: string;
-    startsOn: Date;
-    endsOn: Date;
-    payments: { amount: unknown }[];
+    trainerRevenueEligibleSnapshot: boolean;
+    payments: { amount: unknown; paidOn: Date }[];
   };
 };
 
-function monthKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-function monthKeysBetween(start: Date, end: Date) {
-  const keys: string[] = [];
-  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
-  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
-
-  while (cursor <= last) {
-    keys.push(monthKey(cursor));
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-
-  return keys;
-}
-
-function trailingMonthKeys() {
-  const now = new Date();
-  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
-  const keys: string[] = [];
-
-  for (let index = 0; index < 12; index += 1) {
-    keys.push(monthKey(cursor));
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-
-  return keys;
-}
-
-function toTrainerRecord(trainer: {
-  id: string;
-  fullName: string;
-  isActive: boolean;
-  assignments: TrainerAssignment[];
-}, revenueMonths: string[] = []) {
-  const clientIds = new Set(trainer.assignments
-    .filter((assignment) => assignment.membership.status === "ACTIVE")
-    .map((assignment) => assignment.membership.memberId));
-  const revenueByMonth = new Map(revenueMonths.map((month) => [month, 0]));
-
-  for (const assignment of trainer.assignments) {
-    const membershipMonths = monthKeysBetween(assignment.membership.startsOn, assignment.membership.endsOn);
-    const membershipDuration = Math.max(1, membershipMonths.length);
-    const monthlyAmount = assignment.membership.payments.reduce((total, payment) => total + Number(payment.amount), 0) / membershipDuration;
-    const assignmentStart = assignment.startsOn > assignment.membership.startsOn ? assignment.startsOn : assignment.membership.startsOn;
-    const assignmentEnd = assignment.endsOn && assignment.endsOn < assignment.membership.endsOn ? assignment.endsOn : assignment.membership.endsOn;
-
-    for (const month of monthKeysBetween(assignmentStart, assignmentEnd)) {
-      if (revenueByMonth.has(month)) revenueByMonth.set(month, (revenueByMonth.get(month) ?? 0) + monthlyAmount);
-    }
-  }
-
+function toTrainerRecord(
+  trainer: {
+    id: string;
+    fullName: string;
+    isActive: boolean;
+    assignments: TrainerAssignment[];
+  },
+  revenueMonths: string[] = [],
+) {
+  const clientIds = new Set(
+    trainer.assignments
+      .filter((assignment) => assignment.membership.status === "ACTIVE")
+      .map((assignment) => assignment.membership.memberId),
+  );
   return {
     id: trainer.id,
     fullName: trainer.fullName,
     isActive: trainer.isActive,
     clientCount: clientIds.size,
     assignmentCount: trainer.assignments.length,
-    monthlyRevenue: revenueMonths.map((month) => ({ month, amount: Number((revenueByMonth.get(month) ?? 0).toFixed(2)) })),
+    monthlyRevenue: revenueByMonth(trainer.assignments, revenueMonths),
   };
 }
 
@@ -92,9 +53,11 @@ const trainerSelect = {
         select: {
           memberId: true,
           status: true,
-          startsOn: true,
-          endsOn: true,
-          payments: { where: { status: "SUCCEEDED" as const }, select: { amount: true } },
+          trainerRevenueEligibleSnapshot: true,
+          payments: {
+            where: { status: "SUCCEEDED" as const },
+            select: { amount: true, paidOn: true },
+          },
         },
       },
       startsOn: true,
@@ -154,7 +117,10 @@ export async function POST(request: Request) {
   const isActive = body.isActive ?? true;
 
   if (fullName.length < 2 || fullName.length > 100) {
-    return NextResponse.json({ error: "fullName must be between 2 and 100 characters." }, { status: 400 });
+    return NextResponse.json(
+      { error: "fullName must be between 2 and 100 characters." },
+      { status: 400 },
+    );
   }
   if (typeof isActive !== "boolean") {
     return NextResponse.json({ error: "isActive must be a boolean." }, { status: 400 });

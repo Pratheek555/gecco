@@ -41,6 +41,7 @@ type PlanOption = {
   standardMonthlyFee: string | number;
   durationMonths: number;
   requiresTrainer: boolean;
+  trainerRevenueEligible: boolean;
   isActive: boolean;
 };
 type MembershipRecord = {
@@ -78,6 +79,7 @@ type PlanCard = {
   standardMonthlyFee: string | number;
   durationMonths: number;
   requiresTrainer: boolean;
+  trainerRevenueEligible: boolean;
   isActive: boolean;
   detail: string;
   price: string;
@@ -98,8 +100,9 @@ function planToCard(plan: PlanOption): PlanCard {
     standardMonthlyFee: plan.standardMonthlyFee,
     durationMonths: plan.durationMonths,
     requiresTrainer: plan.requiresTrainer,
+    trainerRevenueEligible: plan.trainerRevenueEligible,
     isActive: plan.isActive,
-    detail: `${plan.type === "GT" ? "Gym Training" : "Personal Training"} · ${plan.code}${plan.requiresTrainer ? " · Trainer required" : ""}`,
+    detail: `${plan.type === "GT" ? "Gym Training" : "Personal Training"} · ${plan.code}${plan.requiresTrainer ? " · Trainer required" : ""}${plan.trainerRevenueEligible ? " · Trainer revenue" : ""}`,
     price: new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
@@ -133,6 +136,9 @@ function AddPlanModal({
   );
   const [durationMonths, setDurationMonths] = useState(String(editingPlan?.durationMonths ?? 1));
   const [requiresTrainer, setRequiresTrainer] = useState(editingPlan?.requiresTrainer ?? false);
+  const [trainerRevenueEligible, setTrainerRevenueEligible] = useState(
+    editingPlan?.trainerRevenueEligible ?? false,
+  );
   const [isActive, setIsActive] = useState(editingPlan?.isActive ?? true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -152,6 +158,7 @@ function AddPlanModal({
           standardMonthlyFee: monthlyFee,
           durationMonths,
           requiresTrainer,
+          trainerRevenueEligible,
           isActive,
         }),
       });
@@ -164,6 +171,7 @@ function AddPlanModal({
         standardMonthlyFee?: string | number;
         durationMonths?: number;
         requiresTrainer?: boolean;
+        trainerRevenueEligible?: boolean;
         isActive?: boolean;
       };
       if (!response.ok)
@@ -186,6 +194,7 @@ function AddPlanModal({
         standardMonthlyFee: data.standardMonthlyFee,
         durationMonths: data.durationMonths,
         requiresTrainer: data.requiresTrainer ?? requiresTrainer,
+        trainerRevenueEligible: data.trainerRevenueEligible ?? trainerRevenueEligible,
         isActive: data.isActive ?? isActive,
       });
       if (editingPlan) onUpdated?.(savedPlan);
@@ -292,6 +301,15 @@ function AddPlanModal({
             />
           </label>
         </div>
+        <label className="plan-active-toggle">
+          <input
+            type="checkbox"
+            checked={trainerRevenueEligible}
+            onChange={(event) => setTrainerRevenueEligible(event.target.checked)}
+            disabled={submitting}
+          />{" "}
+          Include payments from this plan in trainer revenue
+        </label>
         <label className="plan-active-toggle">
           <input
             type="checkbox"
@@ -933,7 +951,7 @@ function Memberships({ notify }: { notify: Notify }) {
           <Empty icon={CreditCard} label={loadError} />
         ) : (
           visible.map((plan) => (
-            <article className="panel plan-card" key={plan.id}>
+            <article className="panel plan-card flex justify-center flex-col" key={plan.id}>
               <div className="plan-top">
                 <span className={`managed-glyph ${plan.tone}`}>
                   <CreditCard size={19} />
@@ -1008,7 +1026,7 @@ function Memberships({ notify }: { notify: Notify }) {
                   <strong>{plan.revenue}</strong>
                 </div>
               </div>
-              <button className="managed-row-action" onClick={() => setEditingPlan(plan)}>
+              <button className="managed-row-action text-red " onClick={() => setEditingPlan(plan)}>
                 Manage plan <ChevronRight size={15} />
               </button>
             </article>

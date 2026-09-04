@@ -20,7 +20,9 @@ function parseDate(value: unknown) {
 
 function addMonthsClamped(date: Date, months: number) {
   const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
-  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
   target.setUTCDate(Math.min(date.getUTCDate(), lastDay));
   return target;
 }
@@ -32,7 +34,10 @@ function parseFee(value: unknown) {
   return null;
 }
 
-export async function POST(request: Request, context: RouteContext<"/api/members/[memberid]/memberships">) {
+export async function POST(
+  request: Request,
+  context: RouteContext<"/api/members/[memberid]/memberships">,
+) {
   const auth = await requirePermission("memberships:write");
   if (!auth.ok) return auth.response;
   const { session } = auth;
@@ -55,13 +60,22 @@ export async function POST(request: Request, context: RouteContext<"/api/members
 
   if (typeof body.planId !== "string" || !body.planId || !startsOn || agreedFee === null) {
     return NextResponse.json(
-      { error: "planId and startsOn are required; agreedFee must be a non-negative amount when provided." },
+      {
+        error:
+          "planId and startsOn are required; agreedFee must be a non-negative amount when provided.",
+      },
       { status: 400 },
     );
   }
 
-  if (body.trainerId !== undefined && (typeof body.trainerId !== "string" || !body.trainerId.trim())) {
-    return NextResponse.json({ error: "trainerId must be a valid trainer id when provided." }, { status: 400 });
+  if (
+    body.trainerId !== undefined &&
+    (typeof body.trainerId !== "string" || !body.trainerId.trim())
+  ) {
+    return NextResponse.json(
+      { error: "trainerId must be a valid trainer id when provided." },
+      { status: 400 },
+    );
   }
 
   const [member, plan] = await Promise.all([
@@ -71,7 +85,14 @@ export async function POST(request: Request, context: RouteContext<"/api/members
     }),
     prisma.plan.findFirst({
       where: { id: body.planId, gymId: session.activeGym.id, isActive: true },
-      select: { id: true, type: true, standardMonthlyFee: true, durationMonths: true, requiresTrainer: true },
+      select: {
+        id: true,
+        type: true,
+        standardMonthlyFee: true,
+        durationMonths: true,
+        requiresTrainer: true,
+        trainerRevenueEligible: true,
+      },
     }),
   ]);
 
@@ -82,38 +103,49 @@ export async function POST(request: Request, context: RouteContext<"/api/members
 
   const trainerId = typeof body.trainerId === "string" ? body.trainerId.trim() : null;
   if (plan.requiresTrainer && !trainerId) {
-    return NextResponse.json({ error: "A trainer must be selected for this plan." }, { status: 400 });
+    return NextResponse.json(
+      { error: "A trainer must be selected for this plan." },
+      { status: 400 },
+    );
   }
 
   const trainer = trainerId
-    ? await prisma.trainer.findFirst({ where: { id: trainerId, gymId: session.activeGym.id, isActive: true }, select: { id: true } })
+    ? await prisma.trainer.findFirst({
+        where: { id: trainerId, gymId: session.activeGym.id, isActive: true },
+        select: { id: true },
+      })
     : null;
-  if (trainerId && !trainer) return NextResponse.json({ error: "Active trainer not found." }, { status: 404 });
+  if (trainerId && !trainer)
+    return NextResponse.json({ error: "Active trainer not found." }, { status: 404 });
 
   const membershipFee = agreedFee ?? plan.standardMonthlyFee;
-  const membership = await prisma.$transaction(async (tx) => tx.membership.create({
-    data: {
-      memberId: member.id,
-      planId: plan.id,
-      planTypeSnapshot: plan.type,
-      durationMonths: plan.durationMonths,
-      startsOn,
-      endsOn,
-      agreedFee: membershipFee,
-      charges: {
-        create: {
-          gymId: session.activeGym.id,
-          memberId: member.id,
-          kind: "MEMBERSHIP_FEE",
-          amount: membershipFee,
-          dueOn: startsOn,
+  const membership = await prisma.$transaction(async (tx) =>
+    tx.membership.create({
+      data: {
+        memberId: member.id,
+        planId: plan.id,
+        planTypeSnapshot: plan.type,
+        trainerRevenueEligibleSnapshot: plan.trainerRevenueEligible,
+        durationMonths: plan.durationMonths,
+        startsOn,
+        endsOn,
+        agreedFee: membershipFee,
+        charges: {
+          create: {
+            gymId: session.activeGym.id,
+            memberId: member.id,
+            kind: "MEMBERSHIP_FEE",
+            amount: membershipFee,
+            dueOn: startsOn,
+          },
         },
+        ...(trainer
+          ? { trainerAssignments: { create: { trainerId: trainer.id, startsOn, endsOn } } }
+          : {}),
       },
-      ...(trainer ? { trainerAssignments: { create: { trainerId: trainer.id, startsOn, endsOn } } } : {}),
-    },
-    include: { plan: true, charges: true, trainerAssignments: true },
-  }));
-
+      include: { plan: true, charges: true, trainerAssignments: true },
+    }),
+  );
 
   return NextResponse.json(membership, { status: 201 });
 }

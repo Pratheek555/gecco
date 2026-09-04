@@ -80,7 +80,13 @@ export async function PATCH(
     );
   const plan = await prisma.plan.findFirst({
     where: { id: planId, gymId: auth.session.activeGym.id },
-    select: { id: true, type: true, durationMonths: true, requiresTrainer: true },
+    select: {
+      id: true,
+      type: true,
+      durationMonths: true,
+      requiresTrainer: true,
+      trainerRevenueEligible: true,
+    },
   });
   if (!plan) return NextResponse.json({ error: "Plan not found for this gym." }, { status: 404 });
   if (plan.requiresTrainer && !trainerId && body.trainerId !== undefined)
@@ -121,6 +127,9 @@ export async function PATCH(
       data: {
         planId: plan.id,
         planTypeSnapshot: plan.type,
+        ...(plan.id !== current.planId
+          ? { trainerRevenueEligibleSnapshot: plan.trainerRevenueEligible }
+          : {}),
         durationMonths: plan.durationMonths,
         startsOn,
         endsOn,

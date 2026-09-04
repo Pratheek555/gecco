@@ -14,6 +14,7 @@ type CreatePlanBody = {
   standardMonthlyFee?: unknown;
   durationMonths?: unknown;
   requiresTrainer?: unknown;
+  trainerRevenueEligible?: unknown;
   isActive?: unknown;
 };
 
@@ -35,7 +36,8 @@ function parseMonthlyFee(value: unknown) {
 
 function parseDurationMonths(value: unknown) {
   if (value === undefined) return 1;
-  if (typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 120) return value;
+  if (typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 120)
+    return value;
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
     const months = Number(value.trim());
     if (months > 0 && months <= 120) return months;
@@ -51,7 +53,17 @@ export async function GET() {
   const plans = await prisma.plan.findMany({
     where: { gymId: session.activeGym.id },
     orderBy: { name: "asc" },
-    select: { id: true, code: true, name: true, type: true, standardMonthlyFee: true, durationMonths: true, requiresTrainer: true, isActive: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      type: true,
+      standardMonthlyFee: true,
+      durationMonths: true,
+      requiresTrainer: true,
+      trainerRevenueEligible: true,
+      isActive: true,
+    },
   });
 
   return NextResponse.json({ plans });
@@ -78,11 +90,15 @@ export async function POST(request: Request) {
   const monthlyFee = parseMonthlyFee(body.standardMonthlyFee);
   const durationMonths = parseDurationMonths(body.durationMonths);
   const requiresTrainer = body.requiresTrainer ?? false;
+  const trainerRevenueEligible = body.trainerRevenueEligible ?? false;
   const isActive = body.isActive ?? true;
 
   if (!code || !name || !isPlanType(body.type) || monthlyFee === null || durationMonths === null) {
     return NextResponse.json(
-      { error: "code, name, type (GT or PT), a positive durationMonths, and a non-negative standardMonthlyFee are required." },
+      {
+        error:
+          "code, name, type (GT or PT), a positive durationMonths, and a non-negative standardMonthlyFee are required.",
+      },
       { status: 400 },
     );
   }
@@ -92,6 +108,12 @@ export async function POST(request: Request) {
   }
   if (typeof requiresTrainer !== "boolean") {
     return NextResponse.json({ error: "requiresTrainer must be a boolean." }, { status: 400 });
+  }
+  if (typeof trainerRevenueEligible !== "boolean") {
+    return NextResponse.json(
+      { error: "trainerRevenueEligible must be a boolean." },
+      { status: 400 },
+    );
   }
 
   try {
@@ -104,6 +126,7 @@ export async function POST(request: Request) {
         standardMonthlyFee: monthlyFee,
         durationMonths,
         requiresTrainer,
+        trainerRevenueEligible,
         isActive,
       },
     });
@@ -111,7 +134,10 @@ export async function POST(request: Request) {
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
-      return NextResponse.json({ error: "A plan with this code already exists for this gym." }, { status: 409 });
+      return NextResponse.json(
+        { error: "A plan with this code already exists for this gym." },
+        { status: 409 },
+      );
     }
 
     throw error;

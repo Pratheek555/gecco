@@ -13,6 +13,7 @@ export type Permission =
   | "plans:manage"
   | "trainers:read"
   | "trainers:manage"
+  | "trainer-incentives:manage"
   | "gym:manage";
 
 export const permissionRoles: Record<Permission, readonly GymRole[]> = {
@@ -30,6 +31,7 @@ export const permissionRoles: Record<Permission, readonly GymRole[]> = {
   "plans:manage": ["OWNER"],
   "trainers:read": ["OWNER", "STAFF"],
   "trainers:manage": ["OWNER", "STAFF"],
+  "trainer-incentives:manage": ["OWNER"],
   "gym:manage": ["OWNER"],
 };
 
