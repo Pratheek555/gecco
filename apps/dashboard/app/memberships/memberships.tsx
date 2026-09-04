@@ -74,6 +74,11 @@ type PlanCard = {
   id: string;
   code: string;
   name: string;
+  type: "GT" | "PT";
+  standardMonthlyFee: string | number;
+  durationMonths: number;
+  requiresTrainer: boolean;
+  isActive: boolean;
   detail: string;
   price: string;
   cadence: string;
@@ -89,6 +94,11 @@ function planToCard(plan: PlanOption): PlanCard {
     id: plan.id,
     code: plan.code,
     name: plan.name,
+    type: plan.type,
+    standardMonthlyFee: plan.standardMonthlyFee,
+    durationMonths: plan.durationMonths,
+    requiresTrainer: plan.requiresTrainer,
+    isActive: plan.isActive,
     detail: `${plan.type === "GT" ? "Gym Training" : "Personal Training"} · ${plan.code}${plan.requiresTrainer ? " · Trainer required" : ""}`,
     price: new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -107,17 +117,23 @@ function planToCard(plan: PlanOption): PlanCard {
 function AddPlanModal({
   close,
   onCreated,
+  editingPlan,
+  onUpdated,
 }: {
   close: () => void;
-  onCreated: (plan: PlanCard) => void;
+  onCreated?: (plan: PlanCard) => void;
+  editingPlan?: PlanCard;
+  onUpdated?: (plan: PlanCard) => void;
 }) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [type, setType] = useState<"GT" | "PT">("GT");
-  const [monthlyFee, setMonthlyFee] = useState("");
-  const [durationMonths, setDurationMonths] = useState("1");
-  const [requiresTrainer, setRequiresTrainer] = useState(false);
-  const [isActive, setIsActive] = useState(true);
+  const [code, setCode] = useState(editingPlan?.code ?? "");
+  const [name, setName] = useState(editingPlan?.name ?? "");
+  const [type, setType] = useState<"GT" | "PT">(editingPlan?.type ?? "GT");
+  const [monthlyFee, setMonthlyFee] = useState(
+    editingPlan ? String(editingPlan.standardMonthlyFee) : "",
+  );
+  const [durationMonths, setDurationMonths] = useState(String(editingPlan?.durationMonths ?? 1));
+  const [requiresTrainer, setRequiresTrainer] = useState(editingPlan?.requiresTrainer ?? false);
+  const [isActive, setIsActive] = useState(editingPlan?.isActive ?? true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -126,8 +142,8 @@ function AddPlanModal({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch("/api/plans", {
-        method: "POST",
+      const response = await fetch(editingPlan ? `/api/plans/${editingPlan.id}` : "/api/plans", {
+        method: editingPlan ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
@@ -150,7 +166,8 @@ function AddPlanModal({
         requiresTrainer?: boolean;
         isActive?: boolean;
       };
-      if (!response.ok) throw new Error(data.error ?? "Could not create the plan.");
+      if (!response.ok)
+        throw new Error(data.error ?? `Could not ${editingPlan ? "update" : "create"} the plan.`);
 
       if (
         !data.id ||
@@ -161,21 +178,25 @@ function AddPlanModal({
         data.durationMonths === undefined
       )
         throw new Error("The created plan response was incomplete.");
-      onCreated(
-        planToCard({
-          id: data.id,
-          code: data.code,
-          name: data.name,
-          type: data.type,
-          standardMonthlyFee: data.standardMonthlyFee,
-          durationMonths: data.durationMonths,
-          requiresTrainer: data.requiresTrainer ?? requiresTrainer,
-          isActive: data.isActive ?? isActive,
-        }),
-      );
+      const savedPlan = planToCard({
+        id: data.id,
+        code: data.code,
+        name: data.name,
+        type: data.type,
+        standardMonthlyFee: data.standardMonthlyFee,
+        durationMonths: data.durationMonths,
+        requiresTrainer: data.requiresTrainer ?? requiresTrainer,
+        isActive: data.isActive ?? isActive,
+      });
+      if (editingPlan) onUpdated?.(savedPlan);
+      else onCreated?.(savedPlan);
       close();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not create the plan.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : `Could not ${editingPlan ? "update" : "create"} the plan.`,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -186,14 +207,18 @@ function AddPlanModal({
       className="modal-layer"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="add-plan-title"
+      aria-labelledby="plan-editor-title"
       onMouseDown={(event) => event.currentTarget === event.target && close()}
     >
       <form className="modal" onSubmit={submit}>
         <div className="modal-header">
           <div>
-            <h2 id="add-plan-title">Add plan</h2>
-            <p>Create a membership plan for your gym.</p>
+            <h2 id="plan-editor-title">{editingPlan ? "Edit plan" : "Add plan"}</h2>
+            <p>
+              {editingPlan
+                ? "Update the plan used for future memberships."
+                : "Create a membership plan for your gym."}
+            </p>
           </div>
           <button
             type="button"
@@ -291,7 +316,13 @@ function AddPlanModal({
             Cancel
           </button>
           <button className="button primary" type="submit" disabled={submitting}>
-            {submitting ? "Creating…" : "Create plan"}
+            {submitting
+              ? editingPlan
+                ? "Saving…"
+                : "Creating…"
+              : editingPlan
+                ? "Save changes"
+                : "Create plan"}
           </button>
         </div>
       </form>
@@ -557,6 +588,185 @@ function AssignPlanModal({ close, onAssigned }: { close: () => void; onAssigned:
   );
 }
 
+function EditMembershipModal({
+  membership,
+  close,
+  onSaved,
+}: {
+  membership: MembershipRecord;
+  close: () => void;
+  onSaved: (membership: Partial<MembershipRecord> & { id: string }) => void;
+}) {
+  const [plans, setPlans] = useState<PlanOption[]>([]);
+  const [trainers, setTrainers] = useState<TrainerOption[]>([]);
+  const [planId, setPlanId] = useState(membership.plan.id);
+  const [startsOn, setStartsOn] = useState(membership.startsOn.slice(0, 10));
+  const [agreedFee, setAgreedFee] = useState(String(membership.agreedFee));
+  const [trainerId, setTrainerId] = useState(membership.trainerAssignments[0]?.trainer.id ?? "");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void Promise.all([fetch("/api/plans"), fetch("/api/trainers")])
+      .then(async ([plansResponse, trainersResponse]) => {
+        const planData = (await plansResponse.json()) as { plans?: PlanOption[]; error?: string };
+        const trainerData = (await trainersResponse.json()) as {
+          trainers?: TrainerOption[];
+          error?: string;
+        };
+        if (!plansResponse.ok || !trainersResponse.ok || !planData.plans || !trainerData.trainers)
+          throw new Error(
+            planData.error ?? trainerData.error ?? "Could not load membership options.",
+          );
+        setPlans(planData.plans);
+        setTrainers(trainerData.trainers.filter((trainer) => trainer.isActive));
+      })
+      .catch((reason) =>
+        setError(reason instanceof Error ? reason.message : "Could not load membership options."),
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
+  const selectedPlan = plans.find((plan) => plan.id === planId);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/memberships/${membership.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          startsOn,
+          agreedFee,
+          trainerId: selectedPlan?.requiresTrainer || trainerId ? trainerId : null,
+        }),
+      });
+      const data = (await response.json()) as Partial<MembershipRecord> & {
+        id?: string;
+        error?: string;
+      };
+      if (!response.ok || !data.id) throw new Error(data.error ?? "Could not update membership.");
+      onSaved(data as Partial<MembershipRecord> & { id: string });
+      close();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not update membership.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="modal-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-membership-title"
+      onMouseDown={(event) => event.currentTarget === event.target && close()}
+    >
+      <form className="modal" onSubmit={submit}>
+        <div className="modal-header">
+          <div>
+            <h2 id="edit-membership-title">Edit membership</h2>
+            <p>Update this member’s plan terms and trainer assignment.</p>
+          </div>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={close}
+            aria-label="Close"
+            disabled={submitting}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {loading && (
+          <div className="modal-loading">
+            <LoaderCircle className="plan-spinner" size={16} /> Loading options…
+          </div>
+        )}
+        <label>
+          Plan
+          <select
+            required
+            value={planId}
+            onChange={(event) => setPlanId(event.target.value)}
+            disabled={loading || submitting}
+          >
+            {plans.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.name} ({plan.code})
+              </option>
+            ))}
+          </select>
+        </label>
+        {selectedPlan?.requiresTrainer && (
+          <label>
+            Trainer
+            <select
+              required
+              value={trainerId}
+              onChange={(event) => setTrainerId(event.target.value)}
+              disabled={loading || submitting}
+            >
+              <option value="" disabled>
+                Select a trainer
+              </option>
+              {trainers.map((trainer) => (
+                <option key={trainer.id} value={trainer.id}>
+                  {trainer.fullName}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="form-row">
+          <label>
+            Starts on
+            <input
+              required
+              type="date"
+              value={startsOn}
+              onChange={(event) => setStartsOn(event.target.value)}
+              disabled={submitting}
+            />
+          </label>
+          <label>
+            Agreed fee
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={agreedFee}
+              onChange={(event) => setAgreedFee(event.target.value)}
+              disabled={submitting}
+            />
+          </label>
+        </div>
+        <p className="modal-hint">
+          Changing the fee is unavailable after a payment has been applied.
+        </p>
+        {error && <p role="alert">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="button secondary" onClick={close} disabled={submitting}>
+            Cancel
+          </button>
+          <button
+            className="button primary"
+            type="submit"
+            disabled={loading || submitting || !planId}
+          >
+            {submitting ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function Memberships({ notify }: { notify: Notify }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Active" | "Archived">("All");
@@ -570,7 +780,10 @@ function Memberships({ notify }: { notify: Notify }) {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState("");
   const [isAddPlanOpen, setIsAddPlanOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<PlanCard | null>(null);
+  const [openPlanMenu, setOpenPlanMenu] = useState<string | null>(null);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
+  const [editingMembership, setEditingMembership] = useState<MembershipRecord | null>(null);
   const visible = useMemo(
     () =>
       items.filter(
@@ -731,10 +944,53 @@ function Memberships({ notify }: { notify: Notify }) {
                 <button
                   className="icon-button small"
                   aria-label={`${plan.name} options`}
-                  onClick={() => notify(`${plan.name} options opened`)}
+                  onClick={() =>
+                    setOpenPlanMenu((current) => (current === plan.id ? null : plan.id))
+                  }
                 >
                   <MoreHorizontal size={17} />
                 </button>
+                {openPlanMenu === plan.id && (
+                  <div className="membership-menu plan-menu" role="menu">
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setOpenPlanMenu(null);
+                        setEditingPlan(plan);
+                      }}
+                    >
+                      Edit plan
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={async () => {
+                        setOpenPlanMenu(null);
+                        if (
+                          !window.confirm(
+                            `Archive ${plan.name}? Existing memberships will keep their original terms.`,
+                          )
+                        )
+                          return;
+                        const response = await fetch(`/api/plans/${plan.id}`, { method: "DELETE" });
+                        const data = (await response.json()) as { error?: string };
+                        if (!response.ok) {
+                          notify(data.error ?? "Could not archive the plan.");
+                          return;
+                        }
+                        setItems((current) =>
+                          current.map((item) =>
+                            item.id === plan.id
+                              ? { ...item, state: "Archived", isActive: false }
+                              : item,
+                          ),
+                        );
+                        notify("Plan archived successfully");
+                      }}
+                    >
+                      Archive plan
+                    </button>
+                  </div>
+                )}
               </div>
               <h2>{plan.name}</h2>
               <p>{plan.detail}</p>
@@ -752,10 +1008,7 @@ function Memberships({ notify }: { notify: Notify }) {
                   <strong>{plan.revenue}</strong>
                 </div>
               </div>
-              <button
-                className="managed-row-action"
-                onClick={() => notify(`${plan.name} opened for editing`)}
-              >
+              <button className="managed-row-action" onClick={() => setEditingPlan(plan)}>
                 Manage plan <ChevronRight size={15} />
               </button>
             </article>
@@ -770,6 +1023,7 @@ function Memberships({ notify }: { notify: Notify }) {
         memberships={memberships}
         loading={membershipsLoading}
         error={membershipsError}
+        onEdit={setEditingMembership}
         onDeleted={(membershipId) =>
           setMemberships((current) =>
             current.filter((membership) => membership.id !== membershipId),
@@ -785,10 +1039,32 @@ function Memberships({ notify }: { notify: Notify }) {
           }}
         />
       )}
+      {editingPlan && (
+        <AddPlanModal
+          editingPlan={editingPlan}
+          close={() => setEditingPlan(null)}
+          onUpdated={(updated) => {
+            setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+            notify("Membership plan updated successfully");
+          }}
+        />
+      )}
       {isAssignPlanOpen && (
         <AssignPlanModal
           close={() => setIsAssignPlanOpen(false)}
           onAssigned={() => notify("Plan assigned successfully")}
+        />
+      )}
+      {editingMembership && (
+        <EditMembershipModal
+          membership={editingMembership}
+          close={() => setEditingMembership(null)}
+          onSaved={(updated) => {
+            setMemberships((current) =>
+              current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
+            );
+            notify("Membership updated successfully");
+          }}
         />
       )}
     </>
@@ -800,12 +1076,14 @@ function Renewals({
   memberships,
   loading,
   error,
+  onEdit,
   onDeleted,
 }: {
   notify: Notify;
   memberships: MembershipRecord[];
   loading: boolean;
   error: string;
+  onEdit: (membership: MembershipRecord) => void;
   onDeleted: (membershipId: string) => void;
 }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -934,7 +1212,7 @@ function Renewals({
                           role="menuitem"
                           onClick={() => {
                             setOpenMenu(null);
-                            notify(`Edit opened for ${membership.member.fullName}'s membership`);
+                            onEdit(membership);
                           }}
                         >
                           Edit
@@ -946,7 +1224,7 @@ function Renewals({
                             void deleteMembership(membership);
                           }}
                         >
-                          Delete
+                          Cancel membership
                         </button>
                       </div>
                     )}

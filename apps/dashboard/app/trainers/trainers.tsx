@@ -94,12 +94,16 @@ function trainerTone(id: string) {
 function AddTrainerModal({
   close,
   onCreated,
+  editingTrainer,
+  onUpdated,
 }: {
   close: () => void;
-  onCreated: (trainer: TrainerRecord) => void;
+  onCreated?: (trainer: TrainerRecord) => void;
+  editingTrainer?: TrainerRecord;
+  onUpdated?: (trainer: TrainerRecord) => void;
 }) {
-  const [fullName, setFullName] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [fullName, setFullName] = useState(editingTrainer?.fullName ?? "");
+  const [isActive, setIsActive] = useState(editingTrainer?.isActive ?? true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -108,19 +112,30 @@ function AddTrainerModal({
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch("/api/trainers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, isActive }),
-      });
+      const response = await fetch(
+        editingTrainer ? `/api/trainers/${editingTrainer.id}` : "/api/trainers",
+        {
+          method: editingTrainer ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullName, isActive }),
+        },
+      );
       const data = (await response.json()) as TrainerRecord & { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Could not create the trainer.");
+      if (!response.ok)
+        throw new Error(
+          data.error ?? `Could not ${editingTrainer ? "update" : "create"} the trainer.`,
+        );
       if (!data.id || !data.fullName)
         throw new Error("The created trainer response was incomplete.");
-      onCreated(data);
+      if (editingTrainer) onUpdated?.({ ...editingTrainer, ...data });
+      else onCreated?.(data);
       close();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not create the trainer.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : `Could not ${editingTrainer ? "update" : "create"} the trainer.`,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -131,14 +146,18 @@ function AddTrainerModal({
       className="modal-layer"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="add-trainer-title"
+      aria-labelledby="trainer-editor-title"
       onMouseDown={(event) => event.currentTarget === event.target && close()}
     >
       <form className="modal" onSubmit={submit}>
         <div className="modal-header">
           <div>
-            <h2 id="add-trainer-title">Add trainer</h2>
-            <p>Add a coach to your gym team.</p>
+            <h2 id="trainer-editor-title">{editingTrainer ? "Edit trainer" : "Add trainer"}</h2>
+            <p>
+              {editingTrainer
+                ? "Update this coach’s profile and availability."
+                : "Add a coach to your gym team."}
+            </p>
           </div>
           <button
             type="button"
@@ -178,7 +197,13 @@ function AddTrainerModal({
             Cancel
           </button>
           <button className="button primary" type="submit" disabled={submitting}>
-            {submitting ? "Adding…" : "Add trainer"}
+            {submitting
+              ? editingTrainer
+                ? "Saving…"
+                : "Adding…"
+              : editingTrainer
+                ? "Save changes"
+                : "Add trainer"}
           </button>
         </div>
       </form>
@@ -593,6 +618,7 @@ function Trainers({ notify }: { notify: Notify }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingTrainer, setEditingTrainer] = useState<TrainerRecord | null>(null);
   const [profileTrainerId, setProfileTrainerId] = useState<string | null>(null);
   const [selectedTrainerId, setSelectedTrainerId] = useState("");
 
@@ -642,6 +668,36 @@ function Trainers({ notify }: { notify: Notify }) {
     }));
     setSelectedTrainerId((current) => current || trainer.id);
     notify("Trainer added successfully");
+  }
+
+  function updateTrainer(trainer: TrainerRecord) {
+    setItems((current) => current.map((item) => (item.id === trainer.id ? trainer : item)));
+    setStats((current) => ({
+      ...current,
+      activeCount:
+        items.filter((item) => item.id !== trainer.id && item.isActive).length +
+        (trainer.isActive ? 1 : 0),
+      inactiveCount:
+        items.filter((item) => item.id !== trainer.id && !item.isActive).length +
+        (trainer.isActive ? 0 : 1),
+    }));
+    notify("Trainer updated successfully");
+  }
+
+  async function deactivateTrainer(trainer: TrainerRecord) {
+    if (
+      !window.confirm(
+        `Deactivate ${trainer.fullName}? Assignment and revenue history will be retained.`,
+      )
+    )
+      return;
+    const response = await fetch(`/api/trainers/${trainer.id}`, { method: "DELETE" });
+    const data = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      notify(data.error ?? "Could not deactivate trainer.");
+      return;
+    }
+    updateTrainer({ ...trainer, isActive: false });
   }
 
   return (
@@ -727,12 +783,25 @@ function Trainers({ notify }: { notify: Notify }) {
                     <Dumbbell size={14} />
                     {trainer.isActive ? "Currently active" : "Currently inactive"}
                   </span>
-                  <button
-                    className="button secondary"
-                    onClick={() => setProfileTrainerId(trainer.id)}
-                  >
-                    View profile
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button className="button secondary" onClick={() => setEditingTrainer(trainer)}>
+                      Edit
+                    </button>
+                    <button
+                      className="button secondary"
+                      onClick={() => setProfileTrainerId(trainer.id)}
+                    >
+                      View profile
+                    </button>
+                    {trainer.isActive && (
+                      <button
+                        className="button secondary"
+                        onClick={() => void deactivateTrainer(trainer)}
+                      >
+                        Deactivate
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
             ))
@@ -743,6 +812,13 @@ function Trainers({ notify }: { notify: Notify }) {
         </div>
       </section>
       {isAddOpen && <AddTrainerModal close={() => setIsAddOpen(false)} onCreated={addTrainer} />}
+      {editingTrainer && (
+        <AddTrainerModal
+          editingTrainer={editingTrainer}
+          close={() => setEditingTrainer(null)}
+          onUpdated={updateTrainer}
+        />
+      )}
       {profileTrainerId && (
         <TrainerProfileModal trainerId={profileTrainerId} close={() => setProfileTrainerId(null)} />
       )}

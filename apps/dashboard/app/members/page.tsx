@@ -71,6 +71,9 @@ type Membership = {
 type Member = {
   id: string;
   fullName: string;
+  memberNumber: string;
+  joinedOn: string;
+  status: "ACTIVE" | "ARCHIVED";
   memberships: Membership[];
   totalAmount: string;
   paidAmount: string;
@@ -210,7 +213,17 @@ function Header({
   );
 }
 
-function MemberDrawer({ member, close }: { member: Member; close: () => void }) {
+function MemberDrawer({
+  member,
+  close,
+  onEdit,
+  onDelete,
+}: {
+  member: Member;
+  close: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div
       className="drawer-layer"
@@ -222,9 +235,26 @@ function MemberDrawer({ member, close }: { member: Member; close: () => void }) 
       <aside className="member-drawer">
         <div className="drawer-top">
           <span>Member details</span>
-          <button className="icon-button" onClick={close} aria-label="Close member details">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              className="icon-button small"
+              onClick={onEdit}
+              aria-label={`Edit ${member.fullName}`}
+            >
+              <span className="sr-only">Edit</span>
+              <MoreHorizontal size={16} />
+            </button>
+            <button
+              className="icon-button small"
+              onClick={onDelete}
+              aria-label={`Archive ${member.fullName}`}
+            >
+              <UserRoundX size={16} />
+            </button>
+            <button className="icon-button" onClick={close} aria-label="Close member details">
+              <X size={18} />
+            </button>
+          </div>
         </div>
         <div className="profile-hero">
           <span className="avatar avatar-xl violet">{initials(member.fullName)}</span>
@@ -308,6 +338,53 @@ function MemberDetailSections({ memberId }: { memberId: string }) {
   const [error, setError] = useState("");
   const [remark, setRemark] = useState("");
   const [isSavingRemark, setIsSavingRemark] = useState(false);
+
+  async function editRemark(note: MemberDetailsResponse["member"]["notes"][number]) {
+    const body = window.prompt("Edit remark", note.body)?.trim();
+    if (!body || body === note.body) return;
+    const response = await fetch(`/api/members/${memberId}/notes/${note.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    const updated = (await response.json()) as typeof note & { error?: string };
+    if (!response.ok) {
+      setError(updated.error ?? "We could not update the remark.");
+      return;
+    }
+    setDetails((current) =>
+      current
+        ? {
+            ...current,
+            member: {
+              ...current.member,
+              notes: current.member.notes.map((item) => (item.id === note.id ? updated : item)),
+            },
+          }
+        : current,
+    );
+  }
+
+  async function deleteRemark(note: MemberDetailsResponse["member"]["notes"][number]) {
+    if (!window.confirm("Delete this remark?")) return;
+    const response = await fetch(`/api/members/${memberId}/notes/${note.id}`, { method: "DELETE" });
+    const result = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setError(result.error ?? "We could not delete the remark.");
+      return;
+    }
+    setDetails((current) =>
+      current
+        ? {
+            ...current,
+            member: {
+              ...current.member,
+              notes: current.member.notes.filter((item) => item.id !== note.id),
+            },
+          }
+        : current,
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -451,6 +528,14 @@ function MemberDetailSections({ memberId }: { memberId: string }) {
                     {note.body} · {new Date(note.createdAt).toLocaleDateString("en-IN")}
                   </small>
                 </span>
+                <span className="flex items-center gap-1">
+                  <button className="text-button" onClick={() => void editRemark(note)}>
+                    Edit
+                  </button>
+                  <button className="text-button" onClick={() => void deleteRemark(note)}>
+                    Delete
+                  </button>
+                </span>
               </div>
             ))}
           </div>
@@ -571,6 +656,145 @@ function AddMemberDialog({
   );
 }
 
+function EditMemberDialog({
+  member,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  member: Member;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [fullName, setFullName] = useState(member.fullName);
+  const [memberNumber, setMemberNumber] = useState(member.memberNumber);
+  const [joinedOn, setJoinedOn] = useState(member.joinedOn);
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    void fetch(`/api/members/${member.id}`)
+      .then((response) => response.json() as Promise<MemberDetailsResponse>)
+      .then((data) => {
+        const contacts = data.member?.contacts ?? [];
+        setPhone(
+          contacts.find((contact) => contact.kind === "PHONE" || contact.kind === "WHATSAPP")
+            ?.value ?? "",
+        );
+        setEmail(contacts.find((contact) => contact.kind === "EMAIL")?.value ?? "");
+      })
+      .catch(() => undefined);
+  }, [member, open]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          memberNumber,
+          joinedOn,
+          contacts: [
+            phone.trim() && { kind: "PHONE", value: phone.trim(), isPrimary: true },
+            email.trim() && { kind: "EMAIL", value: email.trim(), isPrimary: true },
+          ].filter(Boolean),
+        }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "We could not update the member.");
+      await onSaved();
+      onOpenChange(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "We could not update the member.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="gap-5 p-6 sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit member</DialogTitle>
+          <DialogDescription>Update this member’s profile and contact details.</DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={submit}>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-member-full-name">Full name</Label>
+            <Input
+              id="edit-member-full-name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              required
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-member-number">Member number</Label>
+              <Input
+                id="edit-member-number"
+                value={memberNumber}
+                onChange={(event) => setMemberNumber(event.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-member-joined">Joined on</Label>
+              <Input
+                id="edit-member-joined"
+                type="date"
+                value={joinedOn}
+                onChange={(event) => setJoinedOn(event.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-member-phone">Phone</Label>
+              <Input
+                id="edit-member-phone"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-member-email">Email</Label>
+              <Input
+                id="edit-member-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <DialogFooter className="mt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [query, setQuery] = useState("");
@@ -582,10 +806,30 @@ export default function MembersPage() {
   const [session, setSession] = useState<SessionResponse | null>(null);
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
 
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 2600);
+  }
+
+  async function archiveMember(member: Member) {
+    if (
+      !window.confirm(
+        `Archive ${member.fullName}? Their memberships, payments, and notes will be retained.`,
+      )
+    )
+      return;
+    const response = await fetch(`/api/members/${member.id}`, { method: "DELETE" });
+    const data = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      notify(data.error ?? "Could not archive member.");
+      return;
+    }
+    setActiveMember(null);
+    setEditingMember(null);
+    await refreshMembers();
+    notify("Member archived successfully");
   }
 
   useEffect(() => {
@@ -650,20 +894,29 @@ export default function MembersPage() {
   const filteredMembers = useMemo(() => {
     const search = query.trim().toLowerCase();
     return members.filter((member) => {
-      const matchesSearch = !search ||
+      const matchesSearch =
+        !search ||
         `${member.fullName} ${member.memberships.map((membership) => membership.planTypeSnapshot).join(" ")}`
           .toLowerCase()
           .includes(search);
       const trainers = member.memberships.flatMap((membership) => membership.trainers);
-      const matchesTrainer = trainerFilter === "all"
-        || trainerFilter === "unassigned" && trainers.length === 0
-        || trainers.includes(trainerFilter);
+      const matchesTrainer =
+        trainerFilter === "all" ||
+        (trainerFilter === "unassigned" && trainers.length === 0) ||
+        trainers.includes(trainerFilter);
       return matchesSearch && matchesTrainer;
     });
   }, [members, query, trainerFilter]);
 
   const trainerOptions = useMemo(
-    () => [...new Set(members.flatMap((member) => member.memberships.flatMap((membership) => membership.trainers)))].sort(),
+    () =>
+      [
+        ...new Set(
+          members.flatMap((member) =>
+            member.memberships.flatMap((membership) => membership.trainers),
+          ),
+        ),
+      ].sort(),
     [members],
   );
 
@@ -691,8 +944,10 @@ export default function MembersPage() {
                 `${membership.planTypeSnapshot} · ${membershipDuration(membership.durationMonths)}`,
             )
             .join("; ") || "No active memberships",
-          member.memberships.map((membership) => formatTableDate(membership.startsOn)).join("; ") || "—",
-          member.memberships.map((membership) => formatTableDate(membership.endsOn)).join("; ") || "—",
+          member.memberships.map((membership) => formatTableDate(membership.startsOn)).join("; ") ||
+            "—",
+          member.memberships.map((membership) => formatTableDate(membership.endsOn)).join("; ") ||
+            "—",
           money.format(Number(member.totalAmount)),
           money.format(Number(member.paidAmount)),
           money.format(Number(member.balance.totalOutstanding)),
@@ -715,11 +970,7 @@ export default function MembersPage() {
     <div className="app-shell">
       <DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} />
       <div className="app-content">
-        <Header
-          onMenu={() => setMobileNav(true)}
-          notify={notify}
-          session={session}
-        />
+        <Header onMenu={() => setMobileNav(true)} notify={notify} session={session} />
         <main className="dashboard members-dashboard">
           <div className="page-heading members-heading">
             <div>
@@ -826,7 +1077,9 @@ export default function MembersPage() {
                     <option value="all">All trainers</option>
                     <option value="unassigned">Unassigned</option>
                     {trainerOptions.map((trainer) => (
-                      <option key={trainer} value={trainer}>{trainer}</option>
+                      <option key={trainer} value={trainer}>
+                        {trainer}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -947,10 +1200,14 @@ export default function MembersPage() {
                           )}
                         </td>
                         <td>
-                          <strong className="text-sm">{money.format(Number(member.totalAmount))}</strong>
+                          <strong className="text-sm">
+                            {money.format(Number(member.totalAmount))}
+                          </strong>
                         </td>
                         <td>
-                          <strong className="text-sm">{money.format(Number(member.paidAmount))}</strong>
+                          <strong className="text-sm">
+                            {money.format(Number(member.paidAmount))}
+                          </strong>
                         </td>
                         <td>
                           <div className="flex flex-col gap-1">
@@ -962,18 +1219,26 @@ export default function MembersPage() {
                             >
                               {money.format(Number(member.balance.totalOutstanding))}
                             </strong>
-                              <span className="text-xs text-muted-foreground">Total outstanding</span>
+                            <span className="text-xs text-muted-foreground">Total outstanding</span>
                           </div>
                         </td>
                         <td>
-                          {member.memberships.length ? (() => {
-                            const trainers = assignedTrainers(member);
-                            return trainers.length ? (
-                              <div className="flex flex-col items-start gap-2">
-                                {trainers.map((trainer) => <span key={trainer}>{trainer}</span>)}
-                              </div>
-                            ) : <span className="last-visit">Unassigned</span>;
-                          })() : <span className="last-visit">—</span>}
+                          {member.memberships.length ? (
+                            (() => {
+                              const trainers = assignedTrainers(member);
+                              return trainers.length ? (
+                                <div className="flex flex-col items-start gap-2">
+                                  {trainers.map((trainer) => (
+                                    <span key={trainer}>{trainer}</span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="last-visit">Unassigned</span>
+                              );
+                            })()
+                          ) : (
+                            <span className="last-visit">—</span>
+                          )}
                         </td>
                         <td>
                           <button
@@ -1033,7 +1298,30 @@ export default function MembersPage() {
           notify("Member added successfully");
         }}
       />
-      {activeMember && <MemberDrawer member={activeMember} close={() => setActiveMember(null)} />}
+      {activeMember && (
+        <MemberDrawer
+          member={activeMember}
+          close={() => setActiveMember(null)}
+          onEdit={() => {
+            setEditingMember(activeMember);
+            setActiveMember(null);
+          }}
+          onDelete={() => void archiveMember(activeMember)}
+        />
+      )}
+      {editingMember && (
+        <EditMemberDialog
+          member={editingMember}
+          open={Boolean(editingMember)}
+          onOpenChange={(open) => {
+            if (!open) setEditingMember(null);
+          }}
+          onSaved={async () => {
+            await refreshMembers();
+            notify("Member updated successfully");
+          }}
+        />
+      )}
       {toast && (
         <div className="toast" role="status">
           <span>

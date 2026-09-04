@@ -76,13 +76,25 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
   const revenueMonths = trailingMonthKeys();
   const revenueByMonth = new Map(revenueMonths.map((month) => [month, 0]));
   const memberships = trainer.assignments.map((assignment) => {
-    const membershipMonths = monthKeysBetween(assignment.membership.startsOn, assignment.membership.endsOn);
-    const monthlyRevenue = assignment.membership.payments.reduce((total, payment) => total + Number(payment.amount), 0) / Math.max(1, membershipMonths.length);
-    const assignmentStart = assignment.startsOn > assignment.membership.startsOn ? assignment.startsOn : assignment.membership.startsOn;
-    const assignmentEnd = assignment.endsOn && assignment.endsOn < assignment.membership.endsOn ? assignment.endsOn : assignment.membership.endsOn;
+    const membershipMonths = monthKeysBetween(
+      assignment.membership.startsOn,
+      assignment.membership.endsOn,
+    );
+    const monthlyRevenue =
+      assignment.membership.payments.reduce((total, payment) => total + Number(payment.amount), 0) /
+      Math.max(1, membershipMonths.length);
+    const assignmentStart =
+      assignment.startsOn > assignment.membership.startsOn
+        ? assignment.startsOn
+        : assignment.membership.startsOn;
+    const assignmentEnd =
+      assignment.endsOn && assignment.endsOn < assignment.membership.endsOn
+        ? assignment.endsOn
+        : assignment.membership.endsOn;
 
     for (const month of monthKeysBetween(assignmentStart, assignmentEnd)) {
-      if (revenueByMonth.has(month)) revenueByMonth.set(month, (revenueByMonth.get(month) ?? 0) + monthlyRevenue);
+      if (revenueByMonth.has(month))
+        revenueByMonth.set(month, (revenueByMonth.get(month) ?? 0) + monthlyRevenue);
     }
 
     return {
@@ -95,14 +107,19 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
       assignmentStartsOn: assignment.startsOn.toISOString().slice(0, 10),
       assignmentEndsOn: assignment.endsOn?.toISOString().slice(0, 10) ?? null,
       agreedFee: assignment.membership.agreedFee.toString(),
-      paidAmount: assignment.membership.payments.reduce((total, payment) => total + Number(payment.amount), 0).toFixed(2),
+      paidAmount: assignment.membership.payments
+        .reduce((total, payment) => total + Number(payment.amount), 0)
+        .toFixed(2),
       monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
     };
   });
 
   const activeMemberships = memberships.filter((membership) => membership.status === "ACTIVE");
   const activeClientIds = new Set(activeMemberships.map((membership) => membership.member.id));
-  const totalRevenue = memberships.reduce((total, membership) => total + Number(membership.paidAmount), 0);
+  const totalRevenue = memberships.reduce(
+    (total, membership) => total + Number(membership.paidAmount),
+    0,
+  );
 
   return NextResponse.json({
     trainer: {
@@ -117,7 +134,78 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
       totalMemberships: memberships.length,
       totalRevenue: totalRevenue.toFixed(2),
     },
-    monthlyRevenue: revenueMonths.map((month) => ({ month, amount: Number((revenueByMonth.get(month) ?? 0).toFixed(2)) })),
+    monthlyRevenue: revenueMonths.map((month) => ({
+      month,
+      amount: Number((revenueByMonth.get(month) ?? 0).toFixed(2)),
+    })),
     memberships,
+  });
+}
+
+type UpdateTrainerBody = { fullName?: unknown; isActive?: unknown };
+
+export async function PATCH(request: Request, context: RouteContext<"/api/trainers/[trainerid]">) {
+  const auth = await requirePermission("trainers:manage");
+  if (!auth.ok) return auth.response;
+  const { trainerid: trainerId } = await context.params;
+  let body: UpdateTrainerBody;
+  try {
+    body = (await request.json()) as UpdateTrainerBody;
+  } catch {
+    return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+  }
+  const data: { fullName?: string; isActive?: boolean } = {};
+  if (body.fullName !== undefined) {
+    if (
+      typeof body.fullName !== "string" ||
+      body.fullName.trim().length < 2 ||
+      body.fullName.trim().length > 100
+    )
+      return NextResponse.json(
+        { error: "fullName must be between 2 and 100 characters." },
+        { status: 400 },
+      );
+    data.fullName = body.fullName.trim();
+  }
+  if (body.isActive !== undefined) {
+    if (typeof body.isActive !== "boolean")
+      return NextResponse.json({ error: "isActive must be a boolean." }, { status: 400 });
+    data.isActive = body.isActive;
+  }
+  if (!Object.keys(data).length)
+    return NextResponse.json({ error: "At least one trainer field is required." }, { status: 400 });
+  const trainer = await prisma.trainer.findFirst({
+    where: { id: trainerId, gymId: auth.session.activeGym.id },
+    select: { id: true },
+  });
+  if (!trainer) return NextResponse.json({ error: "Trainer not found." }, { status: 404 });
+  const updated = await prisma.trainer.update({
+    where: { id: trainer.id },
+    data,
+    select: { id: true, fullName: true, isActive: true },
+  });
+  return NextResponse.json(updated);
+}
+
+export async function DELETE(
+  _request: Request,
+  context: RouteContext<"/api/trainers/[trainerid]">,
+) {
+  const auth = await requirePermission("trainers:manage");
+  if (!auth.ok) return auth.response;
+  const { trainerid: trainerId } = await context.params;
+  const trainer = await prisma.trainer.findFirst({
+    where: { id: trainerId, gymId: auth.session.activeGym.id },
+    select: { id: true },
+  });
+  if (!trainer) return NextResponse.json({ error: "Trainer not found." }, { status: 404 });
+  const updated = await prisma.trainer.update({
+    where: { id: trainer.id },
+    data: { isActive: false },
+    select: { id: true, isActive: true },
+  });
+  return NextResponse.json({
+    ...updated,
+    message: "Trainer deactivated. Assignment and revenue history was retained.",
   });
 }

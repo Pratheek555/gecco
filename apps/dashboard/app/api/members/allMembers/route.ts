@@ -2,7 +2,6 @@ import { prisma } from "db/client";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/app/api/auth/authorization";
 
-
 export async function GET() {
   const auth = await requirePermission("members:read");
   if (!auth.ok) return auth.response;
@@ -12,11 +11,14 @@ export async function GET() {
   today.setUTCHours(0, 0, 0, 0);
   const [members, memberSummary] = await Promise.all([
     prisma.member.findMany({
-      where: { gymId },
+      where: { gymId, status: "ACTIVE" },
       orderBy: { fullName: "asc" },
       select: {
         id: true,
         fullName: true,
+        memberNumber: true,
+        joinedOn: true,
+        status: true,
         memberships: {
           where: { status: "ACTIVE" },
           orderBy: { startsOn: "asc" },
@@ -70,6 +72,9 @@ export async function GET() {
     members: members.map((member) => ({
       id: member.id,
       fullName: member.fullName,
+      memberNumber: member.memberNumber,
+      joinedOn: member.joinedOn.toISOString().slice(0, 10),
+      status: member.status,
       memberships: member.memberships.map((membership) => ({
         id: membership.id,
         durationMonths: membership.durationMonths,
@@ -85,7 +90,9 @@ export async function GET() {
           .reduce((total, allocation) => total + Number(allocation.amount), 0)
           .toFixed(2),
       })),
-      totalAmount: member.memberships.reduce((total, membership) => total + Number(membership.agreedFee), 0).toFixed(2),
+      totalAmount: member.memberships
+        .reduce((total, membership) => total + Number(membership.agreedFee), 0)
+        .toFixed(2),
       paidAmount: member.memberships
         .flatMap((membership) => membership.charges.flatMap((charge) => charge.allocations))
         .reduce((total, allocation) => total + Number(allocation.amount), 0)
