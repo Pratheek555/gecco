@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -34,8 +34,9 @@ function isId(value: unknown): value is string {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("payments:record");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   let body: CreatePaymentBody;
   try {

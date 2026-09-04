@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -20,8 +20,9 @@ function monthBoundaries(key: string) {
 }
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("memberships:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const todayKey = dateKeyInTimezone(new Date(), session.activeGym.timezone);
   const today = new Date(`${todayKey}T00:00:00.000Z`);

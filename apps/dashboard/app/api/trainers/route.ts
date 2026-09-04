@@ -1,6 +1,6 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 type CreateTrainerBody = {
   fullName?: unknown;
@@ -104,8 +104,9 @@ const trainerSelect = {
 } as const;
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("trainers:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const trainers = await prisma.trainer.findMany({
     where: { gymId: session.activeGym.id },
@@ -134,8 +135,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("trainers:manage");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   let body: CreateTrainerBody;
   try {

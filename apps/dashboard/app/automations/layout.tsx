@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { requireSession } from "../auth-guard";
+import { verifySession } from "../lib/dal";
 
 export default async function AutomationsLayout({ children }: { children: ReactNode }) {
-  await requireSession();
+  await verifySession();
   return children;
 }

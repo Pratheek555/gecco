@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -41,8 +41,9 @@ function bucketPayments(payments: { amount: { toString(): string }; paidOn: Date
 }
 
 export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("payments:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const searchParams = new URL(request.url).searchParams;
   const start = parseDate(searchParams.get("start"));

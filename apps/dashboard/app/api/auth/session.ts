@@ -80,6 +80,9 @@ export async function getSession() {
       id: session.user.id,
       fullName: session.user.fullName,
       email: session.user.email,
+      gymUsers: {
+        role: activeGym.role
+      }
     },
     gyms,
     activeGym,

@@ -1,13 +1,12 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requirePermission("members:read");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
   const gymId = session.activeGym.id;
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);

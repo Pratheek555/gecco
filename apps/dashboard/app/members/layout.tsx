@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireSession } from "../auth-guard";
+import { verifySession } from "../lib/dal";
 
 export const metadata: Metadata = {
   title: "Members | Gymwise",
@@ -7,6 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default async function MembersLayout({ children }: { children: React.ReactNode }) {
-  await requireSession();
+  await verifySession();
   return children;
 }

@@ -1,6 +1,6 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
-import { getSession } from "@/app/api/auth/session";
+import { requirePermission } from "@/app/api/auth/authorization";
 
 const memberStatuses = ["ACTIVE", "ARCHIVED"] as const;
 const contactKinds = ["PHONE", "EMAIL", "WHATSAPP", "OTHER"] as const;
@@ -33,8 +33,9 @@ function isContactInput(value: unknown): value is ContactInput {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const auth = await requirePermission("members:write");
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   let body: CreateMemberBody;
   try {
