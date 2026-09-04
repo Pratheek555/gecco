@@ -953,6 +953,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .membership-menu button { padding: 6px 8px; color: var(--text-soft); background: transparent; border: 0; border-radius: 5px; font-size: 9px; text-align: left; }
 .membership-menu button:hover { color: var(--text); background: var(--surface-soft); }
 .membership-menu button:last-child { color: var(--red); }
+.plan-card { position: relative; }
+.plan-menu { top: 40px; right: 12px; }
+.payment-settings-modal { width: min(820px, 100%); }
+.settings-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.settings-columns h3 { margin: 0 0 10px; font-size: 12px; }
+.settings-row, .settings-add-row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.settings-row input, .settings-add-row input, .settings-add-row select { min-width: 0; flex: 1; height: 34px; padding: 0 9px; color: var(--text); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 7px; font-size: 10px; }
+.settings-row .managed-status { flex: 0 0 auto; }
+.settings-row .text-button { flex: 0 0 auto; color: var(--red); font-size: 9px; }
+.settings-add-row { margin-top: 13px; }
+.settings-add-row .button { height: 34px; font-size: 9px; }
+@media (max-width: 680px) { .settings-columns { grid-template-columns: 1fr; gap: 16px; } }
 .managed-table-panel .member-table td { height: 53px; font-size: 8.5px; }
 
 .trainer-layout, .report-layout, .automation-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(270px, .8fr); gap: 12px; align-items: start; }
