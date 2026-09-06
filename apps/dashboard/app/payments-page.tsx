@@ -436,6 +436,14 @@ function RecordModal({
         if (cancelled) return;
 
         setMembers(membersData.members);
+        const requestedMemberId = new URLSearchParams(window.location.search).get("member");
+        if (
+          requestedMemberId &&
+          membersData.members.some((member) => member.id === requestedMemberId)
+        ) {
+          await selectMember(requestedMemberId);
+          if (cancelled) return;
+        }
         setPaymentModes(modesData.paymentModes);
         setRecipients(recipientsData.recipients);
         setPaymentModeId(modesData.paymentModes[0]?.id ?? "");

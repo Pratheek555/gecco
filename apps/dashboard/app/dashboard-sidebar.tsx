@@ -27,7 +27,7 @@ const navigation = [
       { label: "Members", icon: Users, href: "/members" },
       // { label: "Attendance", icon: Activity, href: "/attendance" },
       { label: "Payments", icon: WalletCards, href: "/payments" },
-      { label: "Messages", icon: MessageCircle, href: "/messages", badge: "8" },
+      { label: "Messages", icon: MessageCircle, href: "/messages", badge: undefined },
     ],
   },
   {
@@ -170,6 +170,7 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
                   <Link
                     key={label}
                     href={href}
+                    aria-current={active ? "page" : undefined}
                     onClick={onClose}
                     className={`nav-item ${active ? "active" : ""}`}
                   >

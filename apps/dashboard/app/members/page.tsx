@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { FormEvent } from "react";
 import {
   CalendarDays,
@@ -54,7 +55,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
 
 type MembershipStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 
@@ -283,6 +283,9 @@ function MemberDrawer({
                       </span>
                       <span className="text-muted-foreground">Agreed fee</span>
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      {money.format(Number(membership.paidAmount))} allocated payments to this plan
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -780,6 +783,40 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [query, setQuery] = useState("");
   const [trainerFilter, setTrainerFilter] = useState("all");
+  const [quickFilter, setQuickFilter] = useState("all");
+  const [sort, setSort] = useState("name");
+  const { session } = useSession();
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: session?.activeGym.timezone ?? "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const daysUntil = (date: string) =>
+    Math.round((Date.parse(date + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 86400000);
+  const matchesQuickFilter = (member: Member, filter: string) => {
+    if (filter === "dues") return Number(member.balance.totalOutstanding) > 0;
+    if (filter === "expiring")
+      return member.memberships.some(
+        (plan) => daysUntil(plan.endsOn) >= 0 && daysUntil(plan.endsOn) <= 30,
+      );
+    if (filter === "none")
+      return !member.memberships.some((plan) => plan.startsOn <= today && plan.endsOn >= today);
+    return true;
+  };
+  const quickFilters = [
+    { id: "all", label: "All members" },
+    { id: "dues", label: "Outstanding dues" },
+    { id: "expiring", label: "Expiring in 30 days" },
+    { id: "none", label: "No active plan" },
+  ];
+  const hasFilters = Boolean(query || trainerFilter !== "all" || quickFilter !== "all");
+  function resetFilters() {
+    setQuery("");
+    setTrainerFilter("all");
+    setQuickFilter("all");
+  }
+
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -851,12 +888,12 @@ export default function MembersPage() {
     setMembers(result.members);
   }
 
-  const filteredMembers = useMemo(() => {
+  const filteredMembers = (() => {
     const search = query.trim().toLowerCase();
     return members.filter((member) => {
       const matchesSearch =
         !search ||
-        `${member.fullName} ${member.memberships.map((membership) => membership.planTypeSnapshot).join(" ")}`
+        `${member.fullName} ${member.memberNumber} ${member.memberships.map((membership) => `${membership.planTypeSnapshot} ${membership.planTypeSnapshot === "GT" ? "Group Gym Training" : "Personal Training"} ${membershipDuration(membership.durationMonths)}`).join(" ")}`
           .toLowerCase()
           .includes(search);
       const trainers = member.memberships.flatMap((membership) => membership.trainers);
@@ -864,9 +901,27 @@ export default function MembersPage() {
         trainerFilter === "all" ||
         (trainerFilter === "unassigned" && trainers.length === 0) ||
         trainers.includes(trainerFilter);
-      return matchesSearch && matchesTrainer;
+      return matchesSearch && matchesTrainer && matchesQuickFilter(member, quickFilter);
     });
-  }, [members, query, trainerFilter]);
+  })().sort((a, b) => {
+    if (sort === "dues")
+      return (
+        Number(b.balance.totalOutstanding) - Number(a.balance.totalOutstanding) ||
+        a.fullName.localeCompare(b.fullName)
+      );
+    if (sort === "expiry") {
+      const nextExpiry = (member: Member) =>
+        Math.min(
+          ...member.memberships
+            .filter((plan) => plan.endsOn >= today)
+            .map((plan) => Date.parse(plan.endsOn)),
+          Infinity,
+        );
+      const difference = nextExpiry(a) - nextExpiry(b);
+      if (difference && !Number.isNaN(difference)) return difference;
+    }
+    return a.fullName.localeCompare(b.fullName);
+  });
 
   const trainerOptions = useMemo(
     () =>
@@ -994,7 +1049,7 @@ export default function MembersPage() {
                 <div>
                   <strong>{money.format(totals.outstanding)}</strong>
                 </div>
-                <small>Across all active memberships</small>
+                <small>Member ledger balances</small>
               </div>
             </article>
             <article className="member-stat-card">
@@ -1018,66 +1073,94 @@ export default function MembersPage() {
                 <p>
                   {isLoading
                     ? "Loading members…"
-                    : query || trainerFilter !== "all"
+                    : hasFilters
                       ? `${filteredMembers.length} matching members`
                       : `${members.length} people in your community`}
                 </p>
               </div>
             </div>
-            <div className="member-toolbar">
-              <div />
-              <div className="member-tools">
-                <label className="member-filter-select">
-                  <Filter size={14} />
-                  <select
-                    aria-label="Filter members by trainer"
-                    value={trainerFilter}
-                    onChange={(event) => setTrainerFilter(event.target.value)}
+            <div className="directory-toolbar">
+              <label className="directory-search">
+                <Search size={18} />
+                <input
+                  aria-label="Search members or plans"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search by name, member number, or plan…"
+                />
+                {query && (
+                  <button onClick={() => setQuery("")} aria-label="Clear search">
+                    <X size={16} />
+                  </button>
+                )}
+              </label>
+              <label className="directory-select">
+                <Filter size={16} />
+                <select
+                  aria-label="Filter members by trainer"
+                  value={trainerFilter}
+                  onChange={(event) => setTrainerFilter(event.target.value)}
+                >
+                  <option value="all">All trainers</option>
+                  <option value="unassigned">Unassigned</option>
+                  {trainerOptions.map((trainer) => (
+                    <option key={trainer}>{trainer}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="directory-select">
+                <span>Sort</span>
+                <select
+                  aria-label="Sort members"
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value)}
+                >
+                  <option value="name">Name A–Z</option>
+                  <option value="dues">Highest outstanding</option>
+                  <option value="expiry">Next expiry</option>
+                </select>
+              </label>
+            </div>
+            <div className="directory-filterbar">
+              <div className="directory-filters" aria-label="Filter member list">
+                {quickFilters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    aria-pressed={quickFilter === filter.id}
+                    onClick={() => setQuickFilter(filter.id)}
                   >
-                    <option value="all">All trainers</option>
-                    <option value="unassigned">Unassigned</option>
-                    {trainerOptions.map((trainer) => (
-                      <option key={trainer} value={trainer}>
-                        {trainer}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="member-search">
-                  <Search size={15} />
-                  <input
-                    id="member-search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search members or memberships..."
-                  />
-                  {query && (
-                    <button onClick={() => setQuery("")} aria-label="Clear search">
-                      <X size={13} />
-                    </button>
-                  )}
-                </label>
+                    {filter.label}
+                    <span>
+                      {isLoading
+                        ? "—"
+                        : members.filter((member) => matchesQuickFilter(member, filter.id)).length}
+                    </span>
+                  </button>
+                ))}
               </div>
+              {hasFilters && (
+                <button className="directory-reset" onClick={resetFilters}>
+                  Clear filters
+                </button>
+              )}
             </div>
             <div className="member-table-wrap roster-wrap">
-              <table className="member-table roster-table">
+              <table className="member-table directory-table">
                 <thead>
                   <tr>
-                    <th>Client name</th>
-                    <th>Active memberships</th>
-                    <th>Start date</th>
-                    <th>End date</th>
-                    <th>Total amount</th>
-                    <th>Paid amount</th>
-                    <th>Dues</th>
-                    <th>Trainer assigned</th>
-                    <th aria-label="Actions" />
+                    <th scope="col">Member</th>
+                    <th scope="col">Memberships & expiry</th>
+                    <th scope="col" className="directory-money">
+                      Outstanding
+                    </th>
+                    <th scope="col">Trainer</th>
+                    <th scope="col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={5}>
                         <div className="member-empty" aria-live="polite">
                           <div>
                             <Spinner className="size-5" />
@@ -1089,7 +1172,7 @@ export default function MembersPage() {
                     </tr>
                   ) : error ? (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={5}>
                         <div className="member-empty">
                           <div>
                             <X size={20} />
@@ -1101,127 +1184,114 @@ export default function MembersPage() {
                     </tr>
                   ) : (
                     filteredMembers.map((member) => (
-                      <tr
-                        key={member.id}
-                        onClick={() => {
-                          if (window.matchMedia("(max-width: 780px)").matches)
-                            setActiveMember(member);
-                        }}
-                        onDoubleClick={() => setActiveMember(member)}
-                      >
-                        <td>
-                          <div className="member-cell">
+                      <tr key={member.id}>
+                        <td data-label="Member">
+                          <button
+                            className="directory-person"
+                            onClick={() => setActiveMember(member)}
+                            aria-label={`View ${member.fullName} details`}
+                          >
                             <Avatar size="lg">
                               <AvatarFallback>{initials(member.fullName)}</AvatarFallback>
                             </Avatar>
-                            <strong>{member.fullName}</strong>
-                          </div>
-                        </td>
-                        <td>
-                          {member.memberships.length ? (
-                            <div className="flex flex-col items-start gap-2">
-                              {member.memberships.map((membership) => (
-                                <div className="flex items-center gap-2" key={membership.id}>
-                                  <Badge variant="outline">
-                                    {membership.planTypeSnapshot} <span aria-hidden>·</span>{" "}
-                                    {membershipDuration(membership.durationMonths)}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="last-visit">No active memberships</span>
-                          )}
-                        </td>
-                        <td>
-                          {member.memberships.length ? (
-                            <div className="flex flex-col items-start gap-2">
-                              {member.memberships.map((membership) => (
-                                <time dateTime={membership.startsOn} key={membership.id}>
-                                  {formatTableDate(membership.startsOn)}
-                                </time>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="last-visit">—</span>
-                          )}
-                        </td>
-                        <td>
-                          {member.memberships.length ? (
-                            <div className="flex flex-col items-start gap-2">
-                              {member.memberships.map((membership) => (
-                                <time dateTime={membership.endsOn} key={membership.id}>
-                                  {formatTableDate(membership.endsOn)}
-                                </time>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="last-visit">—</span>
-                          )}
-                        </td>
-                        <td>
-                          <strong className="text-sm">
-                            {money.format(Number(member.totalAmount))}
-                          </strong>
-                        </td>
-                        <td>
-                          <strong className="text-sm">
-                            {money.format(Number(member.paidAmount))}
-                          </strong>
-                        </td>
-                        <td>
-                          <div className="flex flex-col gap-1">
-                            <strong
-                              className={cn(
-                                "text-sm",
-                                Number(member.balance.overdueAmount) > 0 && "text-destructive",
-                              )}
-                            >
-                              {money.format(Number(member.balance.totalOutstanding))}
-                            </strong>
-                            <span className="text-xs text-muted-foreground">Total outstanding</span>
-                          </div>
-                        </td>
-                        <td>
-                          {member.memberships.length ? (
-                            (() => {
-                              const trainers = assignedTrainers(member);
-                              return trainers.length ? (
-                                <div className="flex flex-col items-start gap-2">
-                                  {trainers.map((trainer) => (
-                                    <span key={trainer}>{trainer}</span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="last-visit">Unassigned</span>
-                              );
-                            })()
-                          ) : (
-                            <span className="last-visit">—</span>
-                          )}
-                        </td>
-                        <td>
-                          <button
-                            className="icon-button small row-more"
-                            onClick={() => setActiveMember(member)}
-                            aria-label={`Open ${member.fullName} details`}
-                          >
-                            <MoreHorizontal size={16} />
+                            <span>
+                              <strong>{member.fullName}</strong>
+                              <small>#{member.memberNumber}</small>
+                            </span>
+                            <ChevronRight size={15} />
                           </button>
+                        </td>
+                        <td data-label="Memberships">
+                          <div className="directory-plans">
+                            {member.memberships.length ? (
+                              member.memberships.map((plan) => {
+                                const days = daysUntil(plan.endsOn);
+                                return (
+                                  <div className="directory-plan" key={plan.id}>
+                                    <strong>
+                                      {plan.planTypeSnapshot === "GT" ? "Group" : "Personal"}{" "}
+                                      <span>· {membershipDuration(plan.durationMonths)}</span>
+                                    </strong>
+                                    <span
+                                      className={
+                                        days < 0 ? "expired" : days <= 30 ? "expiring" : ""
+                                      }
+                                    >
+                                      <CalendarDays size={12} />
+                                      {days < 0 ? "Ended" : "Ends"}{" "}
+                                      <time dateTime={plan.endsOn}>
+                                        {formatTableDate(plan.endsOn)}
+                                      </time>
+                                      {days === 0 ? " · Today" : days === 1 ? " · Tomorrow" : ""}
+                                    </span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span className="directory-muted">No active plan</span>
+                            )}
+                          </div>
+                        </td>
+                        <td data-label="Outstanding" className="directory-money">
+                          <strong
+                            className={
+                              Number(member.balance.overdueAmount) > 0 ? "directory-overdue" : ""
+                            }
+                          >
+                            {money.format(Number(member.balance.totalOutstanding))}
+                          </strong>
+                          <small>
+                            {Number(member.balance.overdueAmount) > 0
+                              ? `${money.format(Number(member.balance.overdueAmount))} overdue`
+                              : Number(member.balance.totalOutstanding) > 0
+                                ? "Not yet overdue"
+                                : "No outstanding dues"}
+                          </small>
+                          {Number(member.balance.availableCredit) > 0 && (
+                            <small>
+                              {money.format(Number(member.balance.availableCredit))} credit
+                            </small>
+                          )}
+                        </td>
+                        <td data-label="Trainer">
+                          <span
+                            className={assignedTrainers(member).length ? "" : "directory-muted"}
+                          >
+                            {assignedTrainers(member).join(", ") || "Unassigned"}
+                          </span>
+                        </td>
+                        <td className="directory-action">
+                          {Number(member.balance.totalOutstanding) > 0 ? (
+                            <Link
+                              prefetch={false}
+                              href={`/payments?record=1&member=${encodeURIComponent(member.id)}`}
+                              className="directory-pay"
+                            >
+                              <IndianRupee size={14} />
+                              Record payment
+                            </Link>
+                          ) : (
+                            <button
+                              onClick={() => setActiveMember(member)}
+                              className="directory-view"
+                            >
+                              View member <ChevronRight size={14} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
                   )}
                   {!filteredMembers.length && !isLoading && !error && (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={5}>
                         <div className="member-empty">
                           <div>
                             <Search size={20} />
                           </div>
                           <strong>No members found</strong>
-                          <span>Try a different search term.</span>
-                          <button onClick={() => setQuery("")}>Clear search</button>
+                          <span>Try another search or clear your filters.</span>
+                          <button onClick={resetFilters}>Clear filters</button>
                         </div>
                       </td>
                     </tr>
