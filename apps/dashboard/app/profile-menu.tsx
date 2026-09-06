@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type ProfileMenuProps = {
-  name: string;
+  name: string | undefined;
   initials: string;
   role: string;
   onNotify: (message: string) => void;
@@ -35,7 +35,7 @@ export default function ProfileMenu({ name, initials, role, onNotify }: ProfileM
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="min-w-52">
       <DropdownMenuGroup>
-        <DropdownMenuLabel>{name}</DropdownMenuLabel>
+        {/*<DropdownMenuLabel>{name}</DropdownMenuLabel>*/}
         {/*<DropdownMenuItem onSelect={() => onNotify("Settings opened")}><Settings />Settings</DropdownMenuItem>*/}
         <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}><LogOut />Sign out</DropdownMenuItem>
       </DropdownMenuGroup>

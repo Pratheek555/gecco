@@ -31,6 +31,9 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { Input } from "@/components/ui/input";
 import MobileNavigation from "./mobile-navigation";
 import ProfileMenu from "./profile-menu";
+import { getInitials, useSession } from "./session-provider";
+
+const initials = getInitials;
 
 type PaymentStatus = "Paid" | "Refunded" | "Voided";
 type PaymentTab = "All" | PaymentStatus;
@@ -65,16 +68,7 @@ type PaymentAnalytics = {
   paymentMethods: { id: string; name: string; amount: string; count: number; share: number }[];
 };
 
-type CurrentSession = { user: { fullName: string }; activeGym: { role: string } };
-
 const paymentColors = ["violet", "blue", "amber", "pink", "green"];
-const initials = (fullName: string) =>
-  fullName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 const paymentStatusLabels = {
   SUCCEEDED: "Paid",
   REFUNDED: "Refunded",
@@ -152,27 +146,8 @@ function ThemeToggle() {
 }
 
 function Header({ onMenu, notify }: { onMenu: () => void; notify: (message: string) => void }) {
-  const [session, setSession] = useState<CurrentSession | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/session")
-      .then((response) => (response.ok ? (response.json() as Promise<CurrentSession>) : null))
-      .then((data) => {
-        if (!cancelled && data) setSession(data);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const fullName = session?.user.fullName ?? "Account";
-  const initials = fullName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const { session, loading } = useSession();
+  const fullName = session?.user.fullName ?? (loading ? "Loading…" : "Account");
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -188,7 +163,7 @@ function Header({ onMenu, notify }: { onMenu: () => void; notify: (message: stri
         <div className="topbar-divider" />
         <ProfileMenu
           name={fullName}
-          initials={initials}
+          initials={session ? getInitials(fullName) : "…"}
           role={session?.activeGym.role ?? ""}
           onNotify={notify}
         />

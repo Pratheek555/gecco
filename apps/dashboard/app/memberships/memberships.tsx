@@ -365,6 +365,185 @@ function addMonthsClampedDate(value: string, months: number) {
   return dateInputValue(target);
 }
 
+function MemberPicker({
+  members,
+  value,
+  onChange,
+  disabled,
+  loading,
+}: {
+  members: MemberOption[];
+  value: string;
+  onChange: (memberId: string) => void;
+  disabled: boolean;
+  loading: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedMember = members.find((member) => member.id === value);
+  const filteredMembers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return normalizedQuery
+      ? members.filter((member) => member.fullName.toLowerCase().includes(normalizedQuery))
+      : members;
+  }, [members, query]);
+
+  return (
+    <div className="member-picker">
+      <input
+        required
+        autoFocus
+        type="search"
+        value={query || selectedMember?.fullName || ""}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          onChange("");
+          setOpen(true);
+        }}
+        onFocus={() => {
+          if (selectedMember && !query) setQuery("");
+          setOpen(true);
+        }}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
+        placeholder={loading ? "Loading members…" : "Search members"}
+        disabled={disabled}
+        aria-label="Search members"
+        aria-expanded={open}
+        aria-controls="assign-member-suggestions"
+        role="combobox"
+        autoComplete="off"
+      />
+      {open && !disabled && (
+        <div
+          id="assign-member-suggestions"
+          role="listbox"
+          aria-label="Members"
+          className="member-picker-suggestions"
+        >
+          {filteredMembers.length ? (
+            filteredMembers.map((member) => (
+              <button
+                type="button"
+                role="option"
+                aria-selected={member.id === value}
+                key={member.id}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  onChange(member.id);
+                  setQuery("");
+                  setOpen(false);
+                }}
+              >
+                {member.fullName}
+              </button>
+            ))
+          ) : (
+            <p>No matching members</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanPicker({
+  plans,
+  value,
+  onChange,
+  disabled,
+  loading,
+}: {
+  plans: PlanOption[];
+  value: string;
+  onChange: (planId: string) => void;
+  disabled: boolean;
+  loading: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedPlan = plans.find((plan) => plan.id === value);
+  const filteredPlans = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return normalizedQuery
+      ? plans.filter(
+          (plan) =>
+            plan.name.toLowerCase().includes(normalizedQuery) ||
+            plan.code.toLowerCase().includes(normalizedQuery),
+        )
+      : plans;
+  }, [plans, query]);
+
+  return (
+    <div className="member-picker">
+      <input
+        required
+        type="search"
+        value={query || selectedPlan?.name || ""}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          onChange("");
+          setOpen(true);
+        }}
+        onFocus={() => {
+          if (selectedPlan && !query) setQuery("");
+          setOpen(true);
+        }}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
+        placeholder={
+          loading
+            ? "Loading plans…"
+            : plans.length
+              ? "Search active plans"
+              : "No active plans available"
+        }
+        disabled={disabled}
+        aria-label="Search active plans"
+        aria-expanded={open}
+        aria-controls="assign-plan-suggestions"
+        role="combobox"
+        autoComplete="off"
+      />
+      {open && !disabled && (
+        <div
+          id="assign-plan-suggestions"
+          role="listbox"
+          aria-label="Active plans"
+          className="member-picker-suggestions"
+        >
+          {filteredPlans.length ? (
+            filteredPlans.map((plan) => (
+              <button
+                type="button"
+                role="option"
+                aria-selected={plan.id === value}
+                key={plan.id}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  onChange(plan.id);
+                  setQuery("");
+                  setOpen(false);
+                }}
+              >
+                {plan.name} ({plan.code}) · {plan.durationMonths}{" "}
+                {plan.durationMonths === 1 ? "month" : "months"} · ₹{plan.standardMonthlyFee}
+                {plan.requiresTrainer ? " · Trainer required" : ""}
+              </button>
+            ))
+          ) : (
+            <p>No matching plans</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AssignPlanModal({ close, onAssigned }: { close: () => void; onAssigned: () => void }) {
   const today = dateInputValue(new Date());
   const [members, setMembers] = useState<MemberOption[]>([]);
@@ -490,42 +669,23 @@ function AssignPlanModal({ close, onAssigned }: { close: () => void; onAssigned:
         )}
         <label>
           Member
-          <select
-            required
-            autoFocus
+          <MemberPicker
+            members={members}
             value={memberId}
-            onChange={(event) => setMemberId(event.target.value)}
+            onChange={setMemberId}
             disabled={loading || submitting}
-          >
-            <option value="" disabled>
-              Select a member
-            </option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.fullName}
-              </option>
-            ))}
-          </select>
+            loading={loading}
+          />
         </label>
         <label>
           Plan
-          <select
-            required
+          <PlanPicker
+            plans={availablePlans}
             value={planId}
-            onChange={(event) => selectPlan(event.target.value)}
+            onChange={selectPlan}
             disabled={loading || submitting}
-          >
-            <option value="" disabled>
-              {availablePlans.length ? "Select an active plan" : "No active plans available"}
-            </option>
-            {availablePlans.map((plan) => (
-              <option key={plan.id} value={plan.id}>
-                {plan.name} ({plan.code}) · {plan.durationMonths}{" "}
-                {plan.durationMonths === 1 ? "month" : "months"} · ₹{plan.standardMonthlyFee}
-                {plan.requiresTrainer ? " · Trainer required" : ""}
-              </option>
-            ))}
-          </select>
+            loading={loading}
+          />
         </label>
         {selectedPlan?.requiresTrainer && (
           <label>

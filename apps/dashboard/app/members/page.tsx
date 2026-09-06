@@ -28,6 +28,9 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardSidebar, { Brand } from "../dashboard-sidebar";
 import MobileNavigation from "../mobile-navigation";
 import ProfileMenu from "../profile-menu";
+import { getInitials, useSession } from "../session-provider";
+
+const initials = getInitials;
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,11 +94,6 @@ type MembersResponse = {
   error?: string;
 };
 
-type SessionResponse = {
-  user: { fullName: string };
-  activeGym: { role: string };
-};
-
 type MemberDetailsResponse = {
   member: {
     contacts: {
@@ -135,16 +133,6 @@ const tableDate = new Intl.DateTimeFormat("en-IN", {
   year: "numeric",
 });
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 function membershipDuration(durationMonths: number) {
   const months = Math.max(1, durationMonths || 1);
   return `${months} ${months === 1 ? "month" : "months"}`;
@@ -177,15 +165,8 @@ function ThemeToggle() {
   );
 }
 
-function Header({
-  onMenu,
-  notify,
-  session,
-}: {
-  onMenu: () => void;
-  notify: (message: string) => void;
-  session: SessionResponse | null;
-}) {
+function Header({ onMenu, notify }: { onMenu: () => void; notify: (message: string) => void }) {
+  const { session, loading } = useSession();
   const displayRole = session?.activeGym.role
     ? session.activeGym.role.charAt(0) + session.activeGym.role.slice(1).toLowerCase()
     : "";
@@ -203,8 +184,8 @@ function Header({
         <ThemeToggle />
         <div className="topbar-divider" />
         <ProfileMenu
-          name={session?.user.fullName ?? "Loading…"}
-          initials={session ? initials(session.user.fullName) : "…"}
+          name={session?.user.fullName ?? (loading ? "Loading…" : "Account")}
+          initials={session ? getInitials(session.user.fullName) : "…"}
           role={displayRole}
           onNotify={notify}
         />
@@ -803,7 +784,6 @@ export default function MembersPage() {
   const [toast, setToast] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [session, setSession] = useState<SessionResponse | null>(null);
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -859,26 +839,6 @@ export default function MembersPage() {
     }
 
     void loadMembers();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSession() {
-      try {
-        const response = await fetch("/api/session");
-        if (!response.ok) return;
-        const result = (await response.json()) as SessionResponse;
-        if (!cancelled) setSession(result);
-      } catch {
-        // The members view remains usable if session display data cannot be loaded.
-      }
-    }
-
-    void loadSession();
     return () => {
       cancelled = true;
     };
@@ -970,7 +930,7 @@ export default function MembersPage() {
     <div className="app-shell">
       <DashboardSidebar open={mobileNav} onClose={() => setMobileNav(false)} onNotify={notify} />
       <div className="app-content">
-        <Header onMenu={() => setMobileNav(true)} notify={notify} session={session} />
+        <Header onMenu={() => setMobileNav(true)} notify={notify} />
         <main className="dashboard members-dashboard">
           <div className="page-heading members-heading">
             <div>

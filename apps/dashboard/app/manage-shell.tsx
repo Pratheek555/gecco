@@ -5,6 +5,7 @@ import { createContext, type ReactNode, useContext, useState } from "react";
 import DashboardSidebar, { Brand } from "./dashboard-sidebar";
 import MobileNavigation from "./mobile-navigation";
 import ProfileMenu from "./profile-menu";
+import { getInitials, useSession } from "./session-provider";
 
 export type Notify = (message: string) => void;
 
@@ -37,10 +38,15 @@ function ThemeToggle() {
 export default function ManageShell({ children }: { children: ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState("");
+  const { session, loading: sessionLoading } = useSession();
+  const name = session?.user.fullName ?? (sessionLoading ? "Loading…" : "Account");
+  const initials = session?.user.fullName ? getInitials(session.user.fullName) : "…";
+  const role = session?.activeGym.role ?? "";
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 2600);
   }
+
   return (
     <DashboardToastContext value={notify}>
       <div className="app-shell">
@@ -62,7 +68,7 @@ export default function ManageShell({ children }: { children: ReactNode }) {
             <div className="topbar-actions">
               <ThemeToggle />
               <div className="topbar-divider" />
-              <ProfileMenu name="Priya Khanna" initials="PK" role="Owner" onNotify={notify} />
+              <ProfileMenu name={name} initials={initials} role={role} onNotify={notify} />
             </div>
           </header>
           <main className="dashboard managed-dashboard">{children}</main>
