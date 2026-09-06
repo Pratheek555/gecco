@@ -184,6 +184,33 @@ export default function Overview() {
         </Card>
       )}
 
+      <section className="overview-shortcuts" aria-label="Daily tasks">
+        <Link href="/members">
+          <Users />
+          <span>
+            <strong>Member directory</strong>
+            <small>Find a member, renew a plan, or review dues</small>
+          </span>
+          <ArrowRight />
+        </Link>
+        <Link href="/memberships">
+          <CalendarDays />
+          <span>
+            <strong>Manage memberships</strong>
+            <small>Plans, renewals, and trainer assignments</small>
+          </span>
+          <ArrowRight />
+        </Link>
+        <Link href="/payments">
+          <WalletCards />
+          <span>
+            <strong>Track collections</strong>
+            <small>Review payments and outstanding balances</small>
+          </span>
+          <ArrowRight />
+        </Link>
+      </section>
+
       <section className="overview-stats" aria-label="Business summary">
         <Card className="overview-stat">
           <span className="managed-stat-icon purple">
@@ -191,7 +218,7 @@ export default function Overview() {
           </span>
           <div>
             <small>Active memberships</small>
-            <strong>{loading && !data ? "—" : (summary?.activeMemberships ?? 0)}</strong>
+            <strong>{summary?.activeMemberships ?? "—"}</strong>
             <em>{summary ? `${summary.totalMembers} total members` : "Loading member totals…"}</em>
           </div>
         </Card>
@@ -201,7 +228,7 @@ export default function Overview() {
           </span>
           <div>
             <small>Expiring in {days} days</small>
-            <strong>{loading ? "—" : (summary?.expiringCount ?? 0)}</strong>
+            <strong>{loading ? "—" : (summary?.expiringCount ?? "—")}</strong>
             <em>
               {loading
                 ? "Loading upcoming expiries…"
@@ -323,6 +350,12 @@ export default function Overview() {
                     </div>
                   );
                 })}
+              </div>
+            ) : error ? (
+              <div className="overview-empty">
+                <AlertCircle />
+                <strong>Upcoming renewals are unavailable</strong>
+                <p>Try loading the overview again to see what needs attention.</p>
               </div>
             ) : (
               <div className="overview-empty">
@@ -458,6 +491,11 @@ export default function Overview() {
                 </Badge>
               </div>
             ))
+          ) : error ? (
+            <div className="overview-empty compact">
+              <strong>Recent payments are unavailable</strong>
+              <p>Try loading the overview again.</p>
+            </div>
           ) : (
             <div className="overview-empty compact">
               <span className="managed-glyph purple">
