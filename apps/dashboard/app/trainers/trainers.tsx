@@ -3,8 +3,10 @@
 import {
   AlertCircle,
   ChevronDown,
+  CreditCard,
   Dumbbell,
   LoaderCircle,
+  Percent,
   Search,
   UserPlus,
   Users,
@@ -53,7 +55,15 @@ type TrainerProfileMembership = {
   assignmentEndsOn: string | null;
   agreedFee: string;
   paidAmount: string;
-  monthlyRevenue: number;
+  attributedRevenue: string;
+};
+
+type TrainerRevenuePayment = {
+  paymentId: string;
+  member: { id: string; fullName: string };
+  plan: { id: string; name: string; code: string; type: "GT" | "PT" };
+  paidOn: string;
+  amount: string;
 };
 
 type TrainerProfileData = {
@@ -65,6 +75,20 @@ type TrainerProfileData = {
     totalRevenue: string;
   };
   monthlyRevenue: { month: string; amount: number }[];
+  monthlyIncentives: {
+    month: string;
+    revenue: number;
+    percentage: number | null;
+    amount: number;
+  }[];
+  incentiveRules: {
+    id: string;
+    percentage: string;
+    startsOn: string;
+    endsOn: string | null;
+  }[];
+  canManageIncentives: boolean;
+  revenuePayments: TrainerRevenuePayment[];
   memberships: TrainerProfileMembership[];
 };
 
@@ -120,7 +144,7 @@ function AddTrainerModal({
           body: JSON.stringify({ fullName, isActive }),
         },
       );
-      const data = (await response.json()) as TrainerRecord & { error?: string };
+      const data = await readJson<TrainerRecord & { error?: string }>(response);
       if (!response.ok)
         throw new Error(
           data.error ?? `Could not ${editingTrainer ? "update" : "create"} the trainer.`,
@@ -338,12 +362,26 @@ function TrainerCharts({
   );
 }
 
-function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: () => void }) {
+function TrainerProfileModal({
+  trainerId,
+  close,
+  notify,
+}: {
+  trainerId: string;
+  close: () => void;
+  notify: Notify;
+}) {
   const [data, setData] = useState<TrainerProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Active" | "Past">("All");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [editingIncentive, setEditingIncentive] = useState(false);
+  const [incentivePercentage, setIncentivePercentage] = useState("");
+  const [effectiveMonth, setEffectiveMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [incentiveError, setIncentiveError] = useState("");
+  const [savingIncentive, setSavingIncentive] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -363,7 +401,31 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
     return () => {
       cancelled = true;
     };
-  }, [trainerId]);
+  }, [trainerId, reloadKey]);
+
+  async function saveIncentive(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingIncentive(true);
+    setIncentiveError("");
+    try {
+      const response = await fetch(`/api/trainers/${trainerId}/incentives`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ percentage: incentivePercentage, effectiveMonth }),
+      });
+      const result = await readJson<{ error?: string }>(response);
+      if (!response.ok) throw new Error(result.error ?? "Could not save the incentive rule.");
+      setEditingIncentive(false);
+      setReloadKey((current) => current + 1);
+      notify("Trainer incentive updated successfully");
+    } catch (reason) {
+      setIncentiveError(
+        reason instanceof Error ? reason.message : "Could not save the incentive rule.",
+      );
+    } finally {
+      setSavingIncentive(false);
+    }
+  }
 
   const visibleMemberships = useMemo(
     () =>
@@ -380,6 +442,7 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
   );
 
   const revenue = data?.monthlyRevenue ?? [];
+  const currentIncentive = data?.monthlyIncentives.at(-1);
   const maxRevenue = Math.max(1, ...revenue.map((item) => item.amount));
   const points = revenue
     .map(
@@ -459,7 +522,7 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
               <div>
                 <small>Total collected</small>
                 <strong>{trainerMoney.format(Number(data.summary.totalRevenue))}</strong>
-                <span>Successful payments</span>
+                <span>Eligible attributed payments</span>
               </div>
               <div>
                 <small>Current month</small>
@@ -471,7 +534,7 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
               <div className="trainer-profile-section-head">
                 <div>
                   <h3>Revenue by month</h3>
-                  <p>Payment totals divided by each membership’s duration.</p>
+                  <p>Eligible payments credited in the month they were collected.</p>
                 </div>
                 <span>{trainerMoney.format(Number(data.summary.totalRevenue))} collected</span>
               </div>
@@ -505,6 +568,144 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
                     <span key={item.month}>{formatMonth(item.month)}</span>
                   ))}
                 </div>
+              </div>
+            </section>
+            <section className="trainer-profile-section trainer-profile-incentive">
+              <div className="trainer-profile-section-head">
+                <div>
+                  <h3>Trainer incentive</h3>
+                  <p>Calculated from eligible revenue using the rule effective that month.</p>
+                </div>
+                {data.canManageIncentives && !editingIncentive && (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => {
+                      setIncentivePercentage(
+                        currentIncentive?.percentage === null ||
+                          currentIncentive?.percentage === undefined
+                          ? ""
+                          : String(currentIncentive.percentage),
+                      );
+                      setEditingIncentive(true);
+                    }}
+                  >
+                    <Percent size={14} />
+                    {data.incentiveRules.length ? "Update incentive" : "Add incentive"}
+                  </button>
+                )}
+              </div>
+              {editingIncentive ? (
+                <form className="trainer-incentive-form" onSubmit={saveIncentive}>
+                  <label>
+                    Incentive percentage
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={incentivePercentage}
+                      onChange={(event) => setIncentivePercentage(event.target.value)}
+                      placeholder="e.g. 10"
+                      disabled={savingIncentive}
+                    />
+                  </label>
+                  <label>
+                    Effective from
+                    <input
+                      required
+                      type="month"
+                      value={effectiveMonth}
+                      onChange={(event) => setEffectiveMonth(event.target.value)}
+                      disabled={savingIncentive}
+                    />
+                  </label>
+                  <div className="trainer-incentive-actions">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => setEditingIncentive(false)}
+                      disabled={savingIncentive}
+                    >
+                      Cancel
+                    </button>
+                    <button className="button primary" type="submit" disabled={savingIncentive}>
+                      {savingIncentive ? "Saving…" : "Save incentive"}
+                    </button>
+                  </div>
+                  {incentiveError && <p role="alert">{incentiveError}</p>}
+                </form>
+              ) : (
+                <div className="trainer-incentive-summary">
+                  <div>
+                    <small>Current rate</small>
+                    <strong>
+                      {currentIncentive?.percentage === null ||
+                      currentIncentive?.percentage === undefined
+                        ? "Not configured"
+                        : `${currentIncentive.percentage}%`}
+                    </strong>
+                  </div>
+                  <div>
+                    <small>Current month eligible revenue</small>
+                    <strong>{trainerMoney.format(currentIncentive?.revenue ?? 0)}</strong>
+                  </div>
+                  <div>
+                    <small>Current month incentive</small>
+                    <strong>{trainerMoney.format(currentIncentive?.amount ?? 0)}</strong>
+                  </div>
+                </div>
+              )}
+            </section>
+            <section className="trainer-profile-section trainer-profile-revenue-payments">
+              <div className="trainer-profile-section-head">
+                <div>
+                  <h3>Revenue payments</h3>
+                  <p>Successful eligible payments made during this trainer’s assignment.</p>
+                </div>
+                <span>{data.revenuePayments.length} payments</span>
+              </div>
+              <div className="trainer-profile-table-wrap">
+                <table className="trainer-profile-table">
+                  <thead>
+                    <tr>
+                      <th>Paid on</th>
+                      <th>Member</th>
+                      <th>Plan</th>
+                      <th>Attributed amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.revenuePayments.length ? (
+                      data.revenuePayments.map((payment) => (
+                        <tr key={payment.paymentId}>
+                          <td>{formatDate(payment.paidOn)}</td>
+                          <td>
+                            <strong>{payment.member.fullName}</strong>
+                          </td>
+                          <td>
+                            <strong>{payment.plan.name}</strong>
+                            <small>{payment.plan.code}</small>
+                          </td>
+                          <td>
+                            <strong>{trainerMoney.format(Number(payment.amount))}</strong>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4}>
+                          <div className="trainer-profile-empty">
+                            <CreditCard size={20} />
+                            <strong>No attributed payments yet</strong>
+                            <span>Eligible successful payments will appear here.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </section>
             <section className="trainer-profile-section trainer-profile-members">
@@ -543,7 +744,7 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
                       <th>Member</th>
                       <th>Plan</th>
                       <th>Membership</th>
-                      <th>Monthly revenue</th>
+                      <th>Attributed revenue</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -570,8 +771,10 @@ function TrainerProfileModal({ trainerId, close }: { trainerId: string; close: (
                             <small>{trainerMoney.format(Number(membership.paidAmount))} paid</small>
                           </td>
                           <td>
-                            <strong>{trainerMoney.format(membership.monthlyRevenue)}</strong>
-                            <small>per membership month</small>
+                            <strong>
+                              {trainerMoney.format(Number(membership.attributedRevenue))}
+                            </strong>
+                            <small>eligible payments</small>
                           </td>
                           <td>
                             <span
@@ -626,11 +829,11 @@ function Trainers({ notify }: { notify: Notify }) {
     void (async () => {
       try {
         const response = await fetch("/api/trainers");
-        const data = (await response.json()) as {
+        const data = await readJson<{
           trainers?: TrainerRecord[];
           stats?: TrainerStats;
           error?: string;
-        };
+        }>(response);
         if (!response.ok || !data.trainers || !data.stats)
           throw new Error(data.error ?? "Could not load trainers.");
         setItems(data.trainers);
@@ -692,7 +895,7 @@ function Trainers({ notify }: { notify: Notify }) {
     )
       return;
     const response = await fetch(`/api/trainers/${trainer.id}`, { method: "DELETE" });
-    const data = (await response.json()) as { error?: string };
+    const data = await readJson<{ error?: string }>(response);
     if (!response.ok) {
       notify(data.error ?? "Could not deactivate trainer.");
       return;
@@ -820,7 +1023,11 @@ function Trainers({ notify }: { notify: Notify }) {
         />
       )}
       {profileTrainerId && (
-        <TrainerProfileModal trainerId={profileTrainerId} close={() => setProfileTrainerId(null)} />
+        <TrainerProfileModal
+          trainerId={profileTrainerId}
+          close={() => setProfileTrainerId(null)}
+          notify={notify}
+        />
       )}
     </>
   );

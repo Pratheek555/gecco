@@ -72,17 +72,33 @@ model GymUser {
 }
 
 model Trainer {
-  id          String                        @id @default(uuid()) @db.Uuid
-  gymId       String                        @map("gym_id") @db.Uuid
-  userId      String?                       @unique @map("user_id") @db.Uuid
-  fullName    String
-  isActive    Boolean                       @default(true)
-  createdAt   DateTime                      @default(now()) @map("created_at")
-  assignments MembershipTrainerAssignment[]
-  gym         Gym                           @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  id             String                        @id @default(uuid()) @db.Uuid
+  gymId          String                        @map("gym_id") @db.Uuid
+  userId         String?                       @unique @map("user_id") @db.Uuid
+  fullName       String
+  isActive       Boolean                       @default(true)
+  createdAt      DateTime                      @default(now()) @map("created_at")
+  assignments    MembershipTrainerAssignment[]
+  incentiveRules TrainerIncentiveRule[]
+  gym            Gym                           @relation(fields: [gymId], references: [id], onDelete: Cascade)
 
   @@index([gymId, isActive])
   @@map("trainers")
+}
+
+model TrainerIncentiveRule {
+  id         String    @id @default(uuid()) @db.Uuid
+  trainerId  String    @map("trainer_id") @db.Uuid
+  percentage Decimal   @db.Decimal(5, 2)
+  startsOn   DateTime  @map("starts_on") @db.Date
+  endsOn     DateTime? @map("ends_on") @db.Date
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  trainer    Trainer   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([trainerId, startsOn])
+  @@index([trainerId, startsOn, endsOn])
+  @@map("trainer_incentive_rules")
 }
 
 model Member {
@@ -134,45 +150,47 @@ model MemberNote {
 }
 
 model Plan {
-  id                 String       @id @default(uuid()) @db.Uuid
-  gymId              String       @map("gym_id") @db.Uuid
-  code               String
-  name               String
-  type               PlanType
-  standardMonthlyFee Decimal      @map("standard_monthly_fee") @db.Decimal(12, 2)
-  durationMonths     Int          @default(1) @map("duration_months")
-  requiresTrainer    Boolean      @default(false) @map("requires_trainer")
-  isActive           Boolean      @default(true) @map("is_active")
-  createdAt          DateTime     @default(now()) @map("created_at")
-  memberships        Membership[]
-  gym                Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  id                     String       @id @default(uuid()) @db.Uuid
+  gymId                  String       @map("gym_id") @db.Uuid
+  code                   String
+  name                   String
+  type                   PlanType
+  standardMonthlyFee     Decimal      @map("standard_monthly_fee") @db.Decimal(12, 2)
+  durationMonths         Int          @default(1) @map("duration_months")
+  requiresTrainer        Boolean      @default(false) @map("requires_trainer")
+  trainerRevenueEligible Boolean      @default(false) @map("trainer_revenue_eligible")
+  isActive               Boolean      @default(true) @map("is_active")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  memberships            Membership[]
+  gym                    Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
 
   @@unique([gymId, code])
   @@map("plans")
 }
 
 model Membership {
-  id                 String                        @id @default(uuid()) @db.Uuid
-  memberId           String                        @map("member_id") @db.Uuid
-  planId             String                        @map("plan_id") @db.Uuid
-  planTypeSnapshot   PlanType                      @map("plan_type_snapshot")
-  durationMonths     Int                           @default(1) @map("duration_months")
-  startsOn           DateTime                      @map("starts_on") @db.Date
-  endsOn             DateTime                      @map("ends_on") @db.Date
-  agreedFee          Decimal                       @map("agreed_fee") @db.Decimal(12, 2)
-  status             MembershipStatus              @default(ACTIVE)
-  renewedFromId      String?                       @map("renewed_from_id") @db.Uuid
-  createdAt          DateTime                      @default(now()) @map("created_at")
-  updatedAt          DateTime                      @updatedAt @map("updated_at")
-  incomingTransfers  MembershipBalanceTransfer[]   @relation("TransferDestination")
-  outgoingTransfers  MembershipBalanceTransfer[]   @relation("TransferSource")
-  charges            MembershipCharge[]
-  trainerAssignments MembershipTrainerAssignment[]
-  member             Member                        @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  plan               Plan                          @relation(fields: [planId], references: [id])
-  renewedFrom        Membership?                   @relation("MembershipRenewal", fields: [renewedFromId], references: [id])
-  renewals           Membership[]                  @relation("MembershipRenewal")
-  payments           Payment[]
+  id                             String                        @id @default(uuid()) @db.Uuid
+  memberId                       String                        @map("member_id") @db.Uuid
+  planId                         String                        @map("plan_id") @db.Uuid
+  planTypeSnapshot               PlanType                      @map("plan_type_snapshot")
+  trainerRevenueEligibleSnapshot Boolean                       @default(false) @map("trainer_revenue_eligible_snapshot")
+  durationMonths                 Int                           @default(1) @map("duration_months")
+  startsOn                       DateTime                      @map("starts_on") @db.Date
+  endsOn                         DateTime                      @map("ends_on") @db.Date
+  agreedFee                      Decimal                       @map("agreed_fee") @db.Decimal(12, 2)
+  status                         MembershipStatus              @default(ACTIVE)
+  renewedFromId                  String?                       @map("renewed_from_id") @db.Uuid
+  createdAt                      DateTime                      @default(now()) @map("created_at")
+  updatedAt                      DateTime                      @updatedAt @map("updated_at")
+  incomingTransfers              MembershipBalanceTransfer[]   @relation("TransferDestination")
+  outgoingTransfers              MembershipBalanceTransfer[]   @relation("TransferSource")
+  charges                        MembershipCharge[]
+  trainerAssignments             MembershipTrainerAssignment[]
+  member                         Member                        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan                           Plan                          @relation(fields: [planId], references: [id])
+  renewedFrom                    Membership?                   @relation("MembershipRenewal", fields: [renewedFromId], references: [id])
+  renewals                       Membership[]                  @relation("MembershipRenewal")
+  payments                       Payment[]
 
   @@index([memberId, status, endsOn])
   @@map("memberships")
@@ -298,13 +316,13 @@ model MembershipBalanceTransfer {
 }
 
 view MemberBalanceSummary {
-  gymId           String    @map("gym_id") @db.Uuid
-  memberId        String    @map("member_id") @db.Uuid
+  gymId            String    @map("gym_id") @db.Uuid
+  memberId         String    @map("member_id") @db.Uuid
   totalOutstanding Decimal   @map("total_outstanding") @db.Decimal(12, 2)
-  overdueAmount   Decimal   @map("overdue_amount") @db.Decimal(12, 2)
-  availableCredit Decimal   @map("available_credit") @db.Decimal(12, 2)
-  oldestDueOn     DateTime? @map("oldest_due_on") @db.Date
-  paymentState    String    @map("payment_state")
+  overdueAmount    Decimal   @map("overdue_amount") @db.Decimal(12, 2)
+  availableCredit  Decimal   @map("available_credit") @db.Decimal(12, 2)
+  oldestDueOn      DateTime? @map("oldest_due_on") @db.Date
+  paymentState     String    @map("payment_state")
 
   @@map("member_balance_summary")
 }

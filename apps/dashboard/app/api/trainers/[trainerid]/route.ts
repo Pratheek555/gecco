@@ -1,36 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
 import { requirePermission } from "@/app/api/auth/authorization";
-
-function monthKey(date: Date) {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-function monthKeysBetween(start: Date, end: Date) {
-  const keys: string[] = [];
-  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
-  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
-
-  while (cursor <= last) {
-    keys.push(monthKey(cursor));
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-
-  return keys;
-}
-
-function trailingMonthKeys() {
-  const now = new Date();
-  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
-  const keys: string[] = [];
-
-  for (let index = 0; index < 12; index += 1) {
-    keys.push(monthKey(cursor));
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-
-  return keys;
-}
+import {
+  attributedPayments,
+  monthlyIncentives,
+  revenueByMonth,
+  totalAttributedRevenue,
+  trailingMonthKeys,
+} from "@/app/lib/trainer-revenue";
 
 export async function GET(_request: Request, context: RouteContext<"/api/trainers/[trainerid]">) {
   const auth = await requirePermission("trainers:read");
@@ -45,6 +22,10 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
       fullName: true,
       isActive: true,
       createdAt: true,
+      incentiveRules: {
+        orderBy: { startsOn: "desc" },
+        select: { id: true, percentage: true, startsOn: true, endsOn: true },
+      },
       assignments: {
         orderBy: { startsOn: "desc" },
         select: {
@@ -58,11 +39,12 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
               startsOn: true,
               endsOn: true,
               agreedFee: true,
+              trainerRevenueEligibleSnapshot: true,
               member: { select: { id: true, fullName: true } },
               plan: { select: { id: true, name: true, code: true, type: true } },
               payments: {
                 where: { status: "SUCCEEDED" },
-                select: { amount: true, paidOn: true },
+                select: { id: true, amount: true, paidOn: true },
               },
             },
           },
@@ -74,28 +56,15 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
   if (!trainer) return NextResponse.json({ error: "Trainer not found." }, { status: 404 });
 
   const revenueMonths = trailingMonthKeys();
-  const revenueByMonth = new Map(revenueMonths.map((month) => [month, 0]));
+  const monthlyRevenue = revenueByMonth(trainer.assignments, revenueMonths);
+  const incentiveRules = trainer.incentiveRules.map((rule) => ({
+    id: rule.id,
+    percentage: rule.percentage.toString(),
+    startsOn: rule.startsOn.toISOString().slice(0, 10),
+    endsOn: rule.endsOn?.toISOString().slice(0, 10) ?? null,
+  }));
   const memberships = trainer.assignments.map((assignment) => {
-    const membershipMonths = monthKeysBetween(
-      assignment.membership.startsOn,
-      assignment.membership.endsOn,
-    );
-    const monthlyRevenue =
-      assignment.membership.payments.reduce((total, payment) => total + Number(payment.amount), 0) /
-      Math.max(1, membershipMonths.length);
-    const assignmentStart =
-      assignment.startsOn > assignment.membership.startsOn
-        ? assignment.startsOn
-        : assignment.membership.startsOn;
-    const assignmentEnd =
-      assignment.endsOn && assignment.endsOn < assignment.membership.endsOn
-        ? assignment.endsOn
-        : assignment.membership.endsOn;
-
-    for (const month of monthKeysBetween(assignmentStart, assignmentEnd)) {
-      if (revenueByMonth.has(month))
-        revenueByMonth.set(month, (revenueByMonth.get(month) ?? 0) + monthlyRevenue);
-    }
+    const payments = attributedPayments(assignment);
 
     return {
       id: assignment.id,
@@ -110,16 +79,26 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
       paidAmount: assignment.membership.payments
         .reduce((total, payment) => total + Number(payment.amount), 0)
         .toFixed(2),
-      monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
+      attributedRevenue: payments
+        .reduce((total, payment) => total + Number(payment.amount), 0)
+        .toFixed(2),
     };
   });
 
   const activeMemberships = memberships.filter((membership) => membership.status === "ACTIVE");
   const activeClientIds = new Set(activeMemberships.map((membership) => membership.member.id));
-  const totalRevenue = memberships.reduce(
-    (total, membership) => total + Number(membership.paidAmount),
-    0,
-  );
+  const totalRevenue = totalAttributedRevenue(trainer.assignments);
+  const revenuePayments = trainer.assignments
+    .flatMap((assignment) =>
+      attributedPayments(assignment).map((payment) => ({
+        paymentId: payment.id,
+        member: assignment.membership.member,
+        plan: assignment.membership.plan,
+        paidOn: payment.paidOn.toISOString().slice(0, 10),
+        amount: payment.amount.toString(),
+      })),
+    )
+    .sort((left, right) => right.paidOn.localeCompare(left.paidOn));
 
   return NextResponse.json({
     trainer: {
@@ -134,10 +113,11 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
       totalMemberships: memberships.length,
       totalRevenue: totalRevenue.toFixed(2),
     },
-    monthlyRevenue: revenueMonths.map((month) => ({
-      month,
-      amount: Number((revenueByMonth.get(month) ?? 0).toFixed(2)),
-    })),
+    monthlyRevenue,
+    monthlyIncentives: monthlyIncentives(monthlyRevenue, trainer.incentiveRules),
+    incentiveRules,
+    canManageIncentives: auth.role === "OWNER",
+    revenuePayments,
     memberships,
   });
 }

@@ -5,6 +5,7 @@ import { hasPermission } from "./permissions";
 describe("Gecco permission policy", () => {
   it("allows owners to manage all operational settings", () => {
     assert.equal(hasPermission("OWNER", "plans:manage"), true);
+    assert.equal(hasPermission("OWNER", "trainer-incentives:manage"), true);
     assert.equal(hasPermission("OWNER", "gym:manage"), true);
     assert.equal(hasPermission("OWNER", "payments:record"), true);
   });
@@ -13,6 +14,7 @@ describe("Gecco permission policy", () => {
     assert.equal(hasPermission("STAFF", "members:write"), true);
     assert.equal(hasPermission("STAFF", "payments:record"), true);
     assert.equal(hasPermission("STAFF", "plans:manage"), false);
+    assert.equal(hasPermission("STAFF", "trainer-incentives:manage"), false);
     assert.equal(hasPermission("STAFF", "gym:manage"), false);
   });
 

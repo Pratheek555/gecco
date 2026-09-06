@@ -1015,7 +1015,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .trainer-profile-stats strong { margin-top: 9px; font-size: 19px; line-height: 1; letter-spacing: -.3px; }
 .trainer-profile-stats span { margin-top: 6px; color: var(--text-faint); font-size: 7px; }
 .trainer-profile-section { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.trainer-profile-revenue { margin-bottom: 13px; }
+.trainer-profile-revenue, .trainer-profile-incentive, .trainer-profile-revenue-payments { margin-bottom: 13px; }
+.trainer-profile-section-head .button { height: 29px; padding: 0 9px; font-size: 8px; }
+.trainer-incentive-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+.trainer-incentive-summary > div { min-height: 72px; padding: 14px 16px; background: var(--surface); }
+.trainer-incentive-summary small, .trainer-incentive-summary strong { display: block; }
+.trainer-incentive-summary small { color: var(--text-faint); font-size: 7.5px; }
+.trainer-incentive-summary strong { margin-top: 8px; font-size: 15px; }
+.trainer-incentive-form { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 12px; padding: 14px 16px; }
+.trainer-incentive-form label { color: var(--text-soft); font-size: 8px; }
+.trainer-incentive-form input { width: 100%; height: 34px; margin-top: 6px; padding: 0 10px; color: var(--text); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 6px; outline: 0; }
+.trainer-incentive-actions { display: flex; gap: 7px; }
+.trainer-incentive-form > p { grid-column: 1 / -1; margin: 0; color: var(--red); font-size: 8px; }
 .trainer-profile-section-head { min-height: 59px; display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
 .trainer-profile-section-head h3 { margin: 0; font-size: 11.5px; font-weight: 630; }
 .trainer-profile-section-head p { margin: 4px 0 0; color: var(--text-faint); font-size: 8px; }
@@ -1203,6 +1214,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .trainer-profile-layer { padding: 12px; }
   .trainer-profile-modal { padding: 16px; }
   .trainer-profile-stats { grid-template-columns: 1fr 1fr; }
+  .trainer-incentive-summary { grid-template-columns: 1fr; }
+  .trainer-incentive-form { grid-template-columns: 1fr; }
+  .trainer-incentive-actions { justify-content: flex-end; }
   .trainer-profile-toolbar { align-items: stretch; flex-direction: column; }
   .trainer-profile-toolbar > label { width: 100%; }
   .managed-dashboard { padding-top: 18px; }

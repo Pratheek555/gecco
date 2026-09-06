@@ -13,6 +13,7 @@ type PlanBody = {
   standardMonthlyFee?: unknown;
   durationMonths?: unknown;
   requiresTrainer?: unknown;
+  trainerRevenueEligible?: unknown;
   isActive?: unknown;
 };
 
@@ -84,7 +85,7 @@ export async function PATCH(request: Request, context: RouteContext<"/api/plans/
       );
     data.durationMonths = duration;
   }
-  for (const key of ["requiresTrainer", "isActive"] as const)
+  for (const key of ["requiresTrainer", "trainerRevenueEligible", "isActive"] as const)
     if (body[key] !== undefined) {
       if (typeof body[key] !== "boolean")
         return NextResponse.json({ error: `${key} must be a boolean.` }, { status: 400 });
