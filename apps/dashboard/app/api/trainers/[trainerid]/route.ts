@@ -39,6 +39,7 @@ export async function GET(_request: Request, context: RouteContext<"/api/trainer
               startsOn: true,
               endsOn: true,
               agreedFee: true,
+              durationMonths: true,
               trainerRevenueEligibleSnapshot: true,
               member: { select: { id: true, fullName: true } },
               plan: { select: { id: true, name: true, code: true, type: true } },

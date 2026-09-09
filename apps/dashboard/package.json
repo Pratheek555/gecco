@@ -5,11 +5,14 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "bunx --package prisma@7.9.1 prisma generate --config ../../packages/db/prisma.config.ts && next build",
+    "configure:r2-cors": "bun scripts/configure-r2-cors.ts",
     "start": "next start --port 3001",
     "lint": "eslint",
     "test": "bun test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1127.0",
+    "@aws-sdk/s3-request-presigner": "^3.1127.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

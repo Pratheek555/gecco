@@ -8,6 +8,9 @@ export type RevenueAssignment<TPayment extends RevenuePayment = RevenuePayment> 
   endsOn: Date | null;
   membership: {
     trainerRevenueEligibleSnapshot: boolean;
+    startsOn: Date;
+    agreedFee: unknown;
+    durationMonths: number;
     payments: TPayment[];
   };
 };
@@ -47,14 +50,43 @@ export function attributedPayments<TPayment extends RevenuePayment>(
   );
 }
 
+function addMonthsClamped(date: Date, months: number) {
+  const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  target.setUTCDate(Math.min(date.getUTCDate(), lastDay));
+  return target;
+}
+
+export function attributedMonthlyRevenue(assignment: RevenueAssignment) {
+  const { membership } = assignment;
+  if (!membership.trainerRevenueEligibleSnapshot || membership.durationMonths < 1) return [];
+
+  const total = Number(membership.agreedFee);
+  if (!Number.isFinite(total)) return [];
+
+  const monthlyAmount = Number((total / membership.durationMonths).toFixed(2));
+
+  return Array.from({ length: membership.durationMonths }, (_, index) => {
+    const attributedOn = addMonthsClamped(membership.startsOn, index);
+    const amount =
+      index === membership.durationMonths - 1
+        ? Number((total - monthlyAmount * (membership.durationMonths - 1)).toFixed(2))
+        : monthlyAmount;
+
+    return { attributedOn, amount };
+  }).filter(({ attributedOn }) => paymentBelongsToAssignment(attributedOn, assignment));
+}
+
 export function revenueByMonth(assignments: RevenueAssignment[], months: string[]) {
   const totals = new Map(months.map((month) => [month, 0]));
 
   for (const assignment of assignments) {
-    for (const payment of attributedPayments(assignment)) {
-      const month = monthKey(payment.paidOn);
+    for (const allocation of attributedMonthlyRevenue(assignment)) {
+      const month = monthKey(allocation.attributedOn);
       if (totals.has(month)) {
-        totals.set(month, (totals.get(month) ?? 0) + Number(payment.amount));
+        totals.set(month, (totals.get(month) ?? 0) + allocation.amount);
       }
     }
   }
@@ -69,8 +101,8 @@ export function totalAttributedRevenue(assignments: RevenueAssignment[]) {
   return assignments.reduce(
     (total, assignment) =>
       total +
-      attributedPayments(assignment).reduce(
-        (assignmentTotal, payment) => assignmentTotal + Number(payment.amount),
+      attributedMonthlyRevenue(assignment).reduce(
+        (assignmentTotal, allocation) => assignmentTotal + allocation.amount,
         0,
       ),
     0,

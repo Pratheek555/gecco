@@ -9,16 +9,17 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(uuid()) @db.Uuid
-  authSubject  String       @unique
-  fullName     String
-  email        String       @unique
-  createdAt    DateTime     @default(now()) @map("created_at")
-  passwordHash String?      @map("password_hash")
-  gymUsers     GymUser[]
-  notes        MemberNote[] @relation("NoteAuthor")
-  payments     Payment[]    @relation("PaymentRecorder")
-  sessions     Session[]
+  id            String         @id @default(uuid()) @db.Uuid
+  authSubject   String         @unique
+  fullName      String
+  email         String         @unique
+  createdAt     DateTime       @default(now()) @map("created_at")
+  passwordHash  String?        @map("password_hash")
+  gymUsers      GymUser[]
+  notes         MemberNote[]   @relation("NoteAuthor")
+  payments      Payment[]      @relation("PaymentRecorder")
+  sessions      Session[]
+  memberImports MemberImport[]
 
   @@map("users")
 }
@@ -39,6 +40,7 @@ model Gym {
   plans          Plan[]
   activeSessions Session[]          @relation("SessionActiveGym")
   trainers       Trainer[]
+  memberImports  MemberImport[]
 
   @@map("gyms")
 }
@@ -133,6 +135,56 @@ model MemberContact {
 
   @@index([memberId, kind])
   @@map("member_contacts")
+}
+
+model MemberImport {
+  id               String             @id @default(uuid()) @db.Uuid
+  gymId            String             @map("gym_id") @db.Uuid
+  createdByUserId  String             @map("created_by_user_id") @db.Uuid
+  originalFileName String             @map("original_file_name")
+  storageKey       String             @unique @map("storage_key")
+  contentType      String             @map("content_type")
+  fileSize         Int                @map("file_size")
+  status           MemberImportStatus @default(UPLOADING)
+  totalRows        Int                @default(0) @map("total_rows")
+  processedRows    Int                @default(0) @map("processed_rows")
+  validRows        Int                @default(0) @map("valid_rows")
+  excludedRows     Int                @default(0) @map("excluded_rows")
+  attempts         Int                @default(0)
+  failureMessage   String?            @map("failure_message")
+  startedAt        DateTime?          @map("started_at")
+  completedAt      DateTime?          @map("completed_at")
+  importedRows     Int                @default(0) @map("imported_rows")
+  correctionForId  String?            @map("correction_for_id") @db.Uuid
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  gym              Gym                @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  createdBy        User               @relation(fields: [createdByUserId], references: [id])
+  rows             MemberImportRow[]
+  correctionFor    MemberImport?     @relation("ImportCorrections", fields: [correctionForId], references: [id])
+  corrections      MemberImport[]    @relation("ImportCorrections")
+
+  @@index([gymId, createdAt])
+  @@index([status, createdAt])
+  @@index([correctionForId])
+  @@map("member_imports")
+}
+
+model MemberImportRow {
+  id             String                @id @default(uuid()) @db.Uuid
+  importId       String                @map("import_id") @db.Uuid
+  rowNumber      Int                   @map("row_number")
+  memberId       String?               @map("member_id")
+  fullName       String?               @map("full_name")
+  normalizedData Json                  @map("normalized_data")
+  errors         Json
+  status         MemberImportRowStatus
+  createdAt      DateTime              @default(now()) @map("created_at")
+  import         MemberImport          @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@unique([importId, rowNumber])
+  @@index([importId, status, rowNumber])
+  @@map("member_import_rows")
 }
 
 model MemberNote {
@@ -336,6 +388,23 @@ enum GymUserRole {
 enum MemberRecordStatus {
   ACTIVE
   ARCHIVED
+}
+
+enum MemberImportStatus {
+  UPLOADING
+  QUEUED
+  VALIDATING
+  READY_FOR_REVIEW
+  FAILED
+  CANCELLED
+  COMMITTING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+}
+
+enum MemberImportRowStatus {
+  VALID
+  EXCLUDED
 }
 
 enum PlanType {

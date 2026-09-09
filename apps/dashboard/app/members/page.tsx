@@ -30,6 +30,7 @@ import DashboardSidebar, { Brand } from "../dashboard-sidebar";
 import MobileNavigation from "../mobile-navigation";
 import ProfileMenu from "../profile-menu";
 import { getInitials, useSession } from "../session-provider";
+import MemberImportDialog from "./member-import-dialog";
 
 const initials = getInitials;
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -823,6 +824,7 @@ export default function MembersPage() {
   const [error, setError] = useState("");
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
   function notify(message: string) {
@@ -998,7 +1000,7 @@ export default function MembersPage() {
             <div className="heading-actions">
               <button
                 className="button secondary import-button"
-                onClick={() => notify("Import is not connected yet")}
+                onClick={() => setIsImportOpen(true)}
               >
                 <Upload size={16} /> Import
               </button>
@@ -1328,6 +1330,7 @@ export default function MembersPage() {
           notify("Member added successfully");
         }}
       />
+      <MemberImportDialog open={isImportOpen} onOpenChange={setIsImportOpen} onNotify={notify} />
       {activeMember && (
         <MemberDrawer
           member={activeMember}
