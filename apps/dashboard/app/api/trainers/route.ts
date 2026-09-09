@@ -15,6 +15,9 @@ type TrainerAssignment = {
     memberId: string;
     status: string;
     trainerRevenueEligibleSnapshot: boolean;
+    startsOn: Date;
+    agreedFee: unknown;
+    durationMonths: number;
     payments: { amount: unknown; paidOn: Date }[];
   };
 };
@@ -54,6 +57,9 @@ const trainerSelect = {
           memberId: true,
           status: true,
           trainerRevenueEligibleSnapshot: true,
+          startsOn: true,
+          agreedFee: true,
+          durationMonths: true,
           payments: {
             where: { status: "SUCCEEDED" as const },
             select: { amount: true, paidOn: true },

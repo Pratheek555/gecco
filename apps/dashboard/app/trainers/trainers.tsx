@@ -520,9 +520,9 @@ function TrainerProfileModal({
                 <span>{data.summary.totalMemberships} total assignments</span>
               </div>
               <div>
-                <small>Total collected</small>
+                <small>Total allocated revenue</small>
                 <strong>{trainerMoney.format(Number(data.summary.totalRevenue))}</strong>
-                <span>Eligible attributed payments</span>
+                <span>Eligible membership value</span>
               </div>
               <div>
                 <small>Current month</small>
@@ -534,9 +534,9 @@ function TrainerProfileModal({
               <div className="trainer-profile-section-head">
                 <div>
                   <h3>Revenue by month</h3>
-                  <p>Eligible payments credited in the month they were collected.</p>
+                  <p>Eligible membership fees divided evenly across their duration.</p>
                 </div>
-                <span>{trainerMoney.format(Number(data.summary.totalRevenue))} collected</span>
+                <span>{trainerMoney.format(Number(data.summary.totalRevenue))} allocated</span>
               </div>
               <div className="trainer-profile-chart">
                 <div className="trainer-profile-y-labels">

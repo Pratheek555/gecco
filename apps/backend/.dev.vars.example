@@ -1,0 +1,2 @@
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+IMPORT_WORKER_SECRET="use-the-same-long-random-secret-as-vercel"
