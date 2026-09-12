@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   TrendingUp,
+  Target,
   Users,
   WalletCards,
   X,
@@ -25,6 +26,7 @@ const navigation = [
     items: [
       { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
       { label: "Members", icon: Users, href: "/members" },
+      { label: "Leads", icon: Target, href: "/leads" },
       // { label: "Attendance", icon: Activity, href: "/attendance" },
       { label: "Payments", icon: WalletCards, href: "/payments" },
       { label: "Messages", icon: MessageCircle, href: "/messages", badge: undefined },

@@ -3,6 +3,8 @@ export type GymRole = "OWNER" | "STAFF" | "TRAINER";
 export type Permission =
   | "members:read"
   | "members:write"
+  | "leads:read"
+  | "leads:write"
   | "overview:read"
   | "memberships:read"
   | "memberships:write"
@@ -21,6 +23,8 @@ export const permissionRoles: Record<Permission, readonly GymRole[]> = {
   // must not receive this permission until an assigned-members query exists.
   "members:read": ["OWNER", "STAFF"],
   "members:write": ["OWNER", "STAFF"],
+  "leads:read": ["OWNER", "STAFF"],
+  "leads:write": ["OWNER", "STAFF"],
   "overview:read": ["OWNER", "STAFF"],
   "memberships:read": ["OWNER", "STAFF"],
   "memberships:write": ["OWNER", "STAFF"],
