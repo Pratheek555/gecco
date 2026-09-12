@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Plus, CreditCard, Users, WalletCards } from "lucide-react";
+import { Home, Plus, Target, Users, WalletCards } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 type MobileNavigationProps = {
-  active?: "home" | "members" | "payments";
+  active?: "home" | "members" | "leads" | "payments";
   onNotify: (message: string) => void;
   onAdd?: () => void;
 };
@@ -19,9 +19,11 @@ export default function MobileNavigation({ active: suppliedActive, onAdd }: Mobi
       ? "home"
       : pathname === "/members"
         ? "members"
-        : pathname === "/payments"
-          ? "payments"
-          : undefined);
+        : pathname === "/leads"
+          ? "leads"
+          : pathname === "/payments"
+            ? "payments"
+            : undefined);
   return (
     <nav className="mobile-tabs" aria-label="Mobile navigation">
       <Link
@@ -43,8 +45,16 @@ export default function MobileNavigation({ active: suppliedActive, onAdd }: Mobi
       <button
         className="mobile-add"
         type="button"
-        onClick={onAdd ?? (() => router.push("/members?add=1"))}
-        aria-label={active === "payments" ? "Record payment" : "Add member"}
+        onClick={
+          onAdd ??
+          (() =>
+            active === "leads"
+              ? window.dispatchEvent(new CustomEvent("gecco:add-lead"))
+              : router.push("/members?add=1"))
+        }
+        aria-label={
+          active === "payments" ? "Record payment" : active === "leads" ? "Add lead" : "Add member"
+        }
       >
         <Plus size={21} />
       </button>
@@ -57,12 +67,12 @@ export default function MobileNavigation({ active: suppliedActive, onAdd }: Mobi
         <span>Payments</span>
       </Link>
       <Link
-        href="/memberships"
-        className={pathname === "/memberships" ? "active" : undefined}
-        aria-current={pathname === "/memberships" ? "page" : undefined}
+        href="/leads"
+        className={active === "leads" ? "active" : undefined}
+        aria-current={active === "leads" ? "page" : undefined}
       >
-        <CreditCard size={19} />
-        <span>Plans</span>
+        <Target size={19} />
+        <span>Leads</span>
       </Link>
     </nav>
   );

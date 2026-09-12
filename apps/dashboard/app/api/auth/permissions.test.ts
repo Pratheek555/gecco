@@ -12,6 +12,7 @@ describe("Gecco permission policy", () => {
 
   it("allows staff to operate the gym without configuration access", () => {
     assert.equal(hasPermission("STAFF", "members:write"), true);
+    assert.equal(hasPermission("STAFF", "leads:write"), true);
     assert.equal(hasPermission("STAFF", "payments:record"), true);
     assert.equal(hasPermission("STAFF", "plans:manage"), false);
     assert.equal(hasPermission("STAFF", "trainer-incentives:manage"), false);
@@ -20,6 +21,7 @@ describe("Gecco permission policy", () => {
 
   it("does not expose broad member or payment data to trainers", () => {
     assert.equal(hasPermission("TRAINER", "members:read"), false);
+    assert.equal(hasPermission("TRAINER", "leads:read"), false);
     assert.equal(hasPermission("TRAINER", "payments:read"), false);
     assert.equal(hasPermission("TRAINER", "memberships:cancel"), false);
   });

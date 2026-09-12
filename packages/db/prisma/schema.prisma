@@ -9,17 +9,18 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  authSubject   String         @unique
-  fullName      String
-  email         String         @unique
-  createdAt     DateTime       @default(now()) @map("created_at")
-  passwordHash  String?        @map("password_hash")
-  gymUsers      GymUser[]
-  notes         MemberNote[]   @relation("NoteAuthor")
-  payments      Payment[]      @relation("PaymentRecorder")
-  sessions      Session[]
-  memberImports MemberImport[]
+  id             String         @id @default(uuid()) @db.Uuid
+  authSubject    String         @unique
+  fullName       String
+  email          String         @unique
+  createdAt      DateTime       @default(now()) @map("created_at")
+  passwordHash   String?        @map("password_hash")
+  gymUsers       GymUser[]
+  notes          MemberNote[]   @relation("NoteAuthor")
+  payments       Payment[]      @relation("PaymentRecorder")
+  sessions       Session[]
+  memberImports  MemberImport[]
+  leadActivities LeadActivity[] @relation("LeadActivityAuthor")
 
   @@map("users")
 }
@@ -41,6 +42,7 @@ model Gym {
   activeSessions Session[]          @relation("SessionActiveGym")
   trainers       Trainer[]
   memberImports  MemberImport[]
+  leads          Lead[]
 
   @@map("gyms")
 }
@@ -104,20 +106,21 @@ model TrainerIncentiveRule {
 }
 
 model Member {
-  id           String             @id @default(uuid()) @db.Uuid
-  gymId        String             @map("gym_id") @db.Uuid
-  memberNumber String             @map("member_number")
-  fullName     String             @map("full_name")
-  joinedOn     DateTime           @default(now()) @map("joined_on") @db.Date
-  status       MemberRecordStatus @default(ACTIVE)
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
-  contacts     MemberContact[]
-  notes        MemberNote[]
-  gym          Gym                @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  charges      MembershipCharge[]
-  memberships  Membership[]
-  payments     Payment[]
+  id            String             @id @default(uuid()) @db.Uuid
+  gymId         String             @map("gym_id") @db.Uuid
+  memberNumber  String             @map("member_number")
+  fullName      String             @map("full_name")
+  joinedOn      DateTime           @default(now()) @map("joined_on") @db.Date
+  status        MemberRecordStatus @default(ACTIVE)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  contacts      MemberContact[]
+  notes         MemberNote[]
+  gym           Gym                @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  charges       MembershipCharge[]
+  memberships   Membership[]
+  payments      Payment[]
+  convertedLead Lead?
 
   @@unique([gymId, memberNumber])
   @@index([gymId, fullName])
@@ -161,8 +164,8 @@ model MemberImport {
   gym              Gym                @relation(fields: [gymId], references: [id], onDelete: Cascade)
   createdBy        User               @relation(fields: [createdByUserId], references: [id])
   rows             MemberImportRow[]
-  correctionFor    MemberImport?     @relation("ImportCorrections", fields: [correctionForId], references: [id])
-  corrections      MemberImport[]    @relation("ImportCorrections")
+  correctionFor    MemberImport?      @relation("ImportCorrections", fields: [correctionForId], references: [id])
+  corrections      MemberImport[]     @relation("ImportCorrections")
 
   @@index([gymId, createdAt])
   @@index([status, createdAt])
@@ -199,6 +202,46 @@ model MemberNote {
 
   @@index([memberId, createdAt])
   @@map("member_notes")
+}
+
+model Lead {
+  id                String         @id @default(uuid()) @db.Uuid
+  gymId             String         @map("gym_id") @db.Uuid
+  fullName          String         @map("full_name")
+  phone             String?
+  email             String?
+  source            LeadSource     @default(OTHER)
+  status            LeadStatus     @default(NEW)
+  interestedPlan    PlanType?      @map("interested_plan")
+  nextFollowUpAt    DateTime?      @map("next_follow_up_at")
+  lastContactedAt   DateTime?      @map("last_contacted_at")
+  lostReason        String?        @map("lost_reason")
+  convertedMemberId String?        @unique @map("converted_member_id") @db.Uuid
+  convertedAt       DateTime?      @map("converted_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  gym               Gym            @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  convertedMember   Member?        @relation(fields: [convertedMemberId], references: [id], onDelete: SetNull)
+  activities        LeadActivity[]
+
+  @@index([gymId, status, updatedAt])
+  @@index([gymId, nextFollowUpAt])
+  @@index([gymId, fullName])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id              String           @id @default(uuid()) @db.Uuid
+  leadId          String           @map("lead_id") @db.Uuid
+  type            LeadActivityType
+  body            String
+  createdByUserId String?          @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at")
+  lead            Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy       User?            @relation("LeadActivityAuthor", fields: [createdByUserId], references: [id])
+
+  @@index([leadId, createdAt])
+  @@map("lead_activities")
 }
 
 model Plan {
@@ -428,6 +471,36 @@ enum ContactKind {
 enum NoteKind {
   REMARK
   FEEDBACK
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  TRIAL_BOOKED
+  TRIAL_COMPLETED
+  WON
+  LOST
+}
+
+enum LeadSource {
+  WALK_IN
+  REFERRAL
+  INSTAGRAM
+  FACEBOOK
+  GOOGLE
+  WEBSITE
+  PHONE
+  OTHER
+}
+
+enum LeadActivityType {
+  NOTE
+  CALL
+  WHATSAPP
+  EMAIL
+  STATUS_CHANGE
+  FOLLOW_UP
+  CONVERSION
 }
 
 enum PaymentStatus {
