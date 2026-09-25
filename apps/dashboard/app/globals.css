@@ -941,6 +941,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .plan-price strong { font-size: 18px; letter-spacing: -.3px; }
 .plan-price span { color: var(--text-faint); font-size: 8px; }
 .plan-data { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 14px -14px 0; padding: 10px 14px; background: var(--surface-soft); border-top: 1px solid var(--border); }
+.plan-data div { text-align: center; }
 .plan-data div + div { padding-left: 8px; border-left: 1px solid var(--border); }
 .plan-data small, .plan-data strong { display: block; }
 .plan-data small { color: var(--text-faint); font-size: 7px; }
