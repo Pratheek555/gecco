@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { type AuthorizedSession, memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -22,9 +22,9 @@ type UpdateMemberBody = {
   contacts?: unknown;
 };
 
-async function getScopedMember(memberId: string, gymId: string) {
+async function getScopedMember(memberId: string, session: AuthorizedSession) {
   return prisma.member.findFirst({
-    where: { id: memberId, gymId },
+    where: { id: memberId, ...memberAccessWhere(session) },
     select: { id: true, fullName: true },
   });
 }
@@ -38,7 +38,7 @@ export async function GET(_request: Request, context: RouteContext<"/api/members
   const gymId = session.activeGym.id;
 
   const member = await prisma.member.findFirst({
-    where: { id: memberId, gymId },
+    where: { id: memberId, ...memberAccessWhere(session) },
     select: {
       id: true,
       fullName: true,
@@ -136,7 +136,7 @@ export async function POST(request: Request, context: RouteContext<"/api/members
     );
   }
 
-  const member = await getScopedMember(memberId, session.activeGym.id);
+  const member = await getScopedMember(memberId, session);
   if (!member) return NextResponse.json({ error: "Member not found." }, { status: 404 });
 
   const remark = await prisma.memberNote.create({
@@ -238,7 +238,7 @@ export async function PATCH(request: Request, context: RouteContext<"/api/member
     );
 
   const member = await prisma.member.findFirst({
-    where: { id: memberId, gymId: session.activeGym.id },
+    where: { id: memberId, ...memberAccessWhere(session) },
     select: { id: true },
   });
   if (!member) return NextResponse.json({ error: "Member not found." }, { status: 404 });
@@ -281,7 +281,7 @@ export async function DELETE(_request: Request, context: RouteContext<"/api/memb
   const { session } = auth;
   const { memberid: memberId } = await context.params;
   const member = await prisma.member.findFirst({
-    where: { id: memberId, gymId: session.activeGym.id },
+    where: { id: memberId, ...memberAccessWhere(session) },
     select: { id: true },
   });
   if (!member) return NextResponse.json({ error: "Member not found." }, { status: 404 });

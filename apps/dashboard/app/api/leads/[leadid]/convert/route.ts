@@ -6,7 +6,7 @@ import { requirePermission } from "@/app/api/auth/authorization";
 export const runtime = "nodejs";
 
 export async function POST(request: Request, context: RouteContext<"/api/leads/[leadid]/convert">) {
-  const auth = await requirePermission("leads:write");
+  const auth = await requirePermission("leads:write", { fullMemberScope: true });
   if (!auth.ok) return auth.response;
 
   let payload: unknown = {};

@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
+import { normalizeEmail } from "@/app/api/auth/email";
 import { hashPassword, isValidPassword } from "@/app/api/auth/password";
+import { createSession, setSessionCookie } from "@/app/api/auth/session";
+
+function isValidTimezone(value: string) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const runtime = "nodejs";
 
@@ -23,24 +34,24 @@ export async function POST(request: Request) {
 
   const { email, fullName, password, gymName, timezone } = body;
 
+  const normalizedEmail = normalizeEmail(email);
   if (
-    typeof email !== "string" || !email.trim() ||
-    typeof fullName !== "string" || !fullName.trim() ||
+    !normalizedEmail ||
+    typeof fullName !== "string" || fullName.trim().length < 2 || fullName.trim().length > 100 ||
     !isValidPassword(password) ||
-    typeof gymName !== "string" || !gymName.trim() ||
-    (timezone !== undefined && (typeof timezone !== "string" || !timezone.trim()))
+    typeof gymName !== "string" || gymName.trim().length < 2 || gymName.trim().length > 100 ||
+    (timezone !== undefined && (typeof timezone !== "string" || !isValidTimezone(timezone.trim())))
   ) {
     return NextResponse.json(
-      { error: "email, fullName, gymName, and a password of at least 8 characters are required." },
+      { error: "A valid email, your name, a gym name, and a password of at least 8 characters are required." },
       { status: 400 },
     );
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
   const passwordHash = await hashPassword(password);
 
   try {
-  const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           authSubject: `password:${crypto.randomUUID()}`,
@@ -86,7 +97,10 @@ export async function POST(request: Request) {
       timeout: 20_000,
     });
 
-    return NextResponse.json(result, { status: 201 });
+    // Sign the owner straight in so onboarding can continue inside the new workspace.
+    const response = NextResponse.json(result, { status: 201 });
+    setSessionCookie(response, await createSession(result.userId, result.gymId));
+    return response;
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });

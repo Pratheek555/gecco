@@ -1,6 +1,6 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { memberRelationWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,7 @@ export async function PATCH(request: Request, context: RouteContext<"/api/paymen
     return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
   const payment = await prisma.payment.findFirst({
-    where: { id: paymentId, gymId: auth.session.activeGym.id },
+    where: { id: paymentId, gymId: auth.session.activeGym.id, ...memberRelationWhere(auth.session) },
     select: { id: true, status: true },
   });
   if (!payment) return NextResponse.json({ error: "Payment not found." }, { status: 404 });
@@ -81,7 +81,7 @@ export async function DELETE(request: Request, context: RouteContext<"/api/payme
     /* empty body is valid */
   }
   const payment = await prisma.payment.findFirst({
-    where: { id: paymentId, gymId: auth.session.activeGym.id },
+    where: { id: paymentId, gymId: auth.session.activeGym.id, ...memberRelationWhere(auth.session) },
     select: { id: true, status: true },
   });
   if (!payment) return NextResponse.json({ error: "Payment not found." }, { status: 404 });

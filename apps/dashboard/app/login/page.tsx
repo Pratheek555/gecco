@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
+import { useSession } from "../session-provider";
 
 type LoginResponse = {
   error?: string;
@@ -12,6 +13,7 @@ type LoginResponse = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refreshSession } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,6 +38,7 @@ export default function LoginPage() {
         return;
       }
 
+      await refreshSession();
       router.push("/dashboard");
     } catch {
       setError("We could not reach Gecco. Check your connection and try again.");

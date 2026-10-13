@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { verifySession } from "../lib/dal";
+import { requirePageAccess } from "../lib/dal";
 
 export const metadata: Metadata = {
   title: "Messages | Gymwise",
@@ -7,6 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default async function MessagesLayout({ children }: { children: React.ReactNode }) {
-  await verifySession();
+  await requirePageAccess("members:read");
   return children;
 }

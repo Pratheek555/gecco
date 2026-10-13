@@ -41,7 +41,7 @@ function bucketPayments(payments: { amount: { toString(): string }; paidOn: Date
 }
 
 export async function GET(request: Request) {
-  const auth = await requirePermission("payments:read");
+  const auth = await requirePermission("payments:read", { fullMemberScope: true });
   if (!auth.ok) return auth.response;
   const { session } = auth;
 

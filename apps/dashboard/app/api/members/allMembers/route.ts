@@ -1,6 +1,6 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export async function GET() {
   const auth = await requirePermission("members:read");
@@ -11,7 +11,7 @@ export async function GET() {
   today.setUTCHours(0, 0, 0, 0);
   const [members, memberSummary] = await Promise.all([
     prisma.member.findMany({
-      where: { gymId, status: "ACTIVE" },
+      where: { ...memberAccessWhere(session), status: "ACTIVE" },
       orderBy: { fullName: "asc" },
       select: {
         id: true,

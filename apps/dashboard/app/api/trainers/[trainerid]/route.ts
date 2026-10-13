@@ -10,7 +10,7 @@ import {
 } from "@/app/lib/trainer-revenue";
 
 export async function GET(_request: Request, context: RouteContext<"/api/trainers/[trainerid]">) {
-  const auth = await requirePermission("trainers:read");
+  const auth = await requirePermission("trainers:read", { fullMemberScope: true });
   if (!auth.ok) return auth.response;
   const { session } = auth;
 

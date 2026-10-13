@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { verifySession } from "../lib/dal";
+import { requirePageAccess } from "../lib/dal";
 
 export default async function AutomationsLayout({ children }: { children: ReactNode }) {
-  await verifySession();
+  await requirePageAccess("gym:manage");
   return children;
 }

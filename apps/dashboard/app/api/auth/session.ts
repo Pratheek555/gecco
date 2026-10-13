@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 import { prisma } from "db/client";
+import { effectivePermissions } from "./permissions";
 
 export const SESSION_COOKIE = "gecco_session";
 const SESSION_LIFETIME_SECONDS = 60 * 60 * 24 * 7;
@@ -60,17 +61,28 @@ export async function getSession() {
           email: true,
           gymUsers: {
             where: { isActive: true, gym: { isActive: true } },
-            select: { role: true, gym: { select: { id: true, name: true, timezone: true } } },
+            select: {
+              role: true,
+              permissions: true,
+              memberScope: true,
+              gym: { select: { id: true, name: true, timezone: true } },
+            },
           },
         },
       },
     },
   });
 
-  if (!session || !session.activeGymId) return null;
+  if (!session) return null;
 
-  const gyms = session.user.gymUsers.map(({ gym, role }) => ({ ...gym, role }));
-  const activeGym = gyms.find((gym) => gym.id === session.activeGymId);
+  const gyms = session.user.gymUsers.map(({ gym, role, permissions, memberScope }) => ({
+    ...gym,
+    role,
+    memberScope: role === "OWNER" ? ("ALL" as const) : memberScope,
+    permissions: effectivePermissions(role, permissions, memberScope),
+  }));
+  // Fall back to another gym when access to the selected one was removed.
+  const activeGym = gyms.find((gym) => gym.id === session.activeGymId) ?? gyms[0];
   if (!activeGym) return null;
 
   return {

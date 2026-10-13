@@ -22,6 +22,8 @@ model User {
   memberImports  MemberImport[]
   leadActivities LeadActivity[] @relation("LeadActivityAuthor")
   assignedLeads  Lead[]         @relation("LeadAssignee")
+  sentInvites    GymInvite[]    @relation("InviteSender")
+  acceptedInvites GymInvite[]   @relation("InviteAcceptor")
 
   @@map("users")
 }
@@ -30,6 +32,8 @@ model Gym {
   id             String             @id @default(uuid()) @db.Uuid
   name           String
   timezone       String             @default("Asia/Kolkata")
+  /// Maximum non-owner team accounts (active members + pending invites). Managed by Gecco, not by owners.
+  seatLimit      Int                @default(5) @map("seat_limit")
   isActive       Boolean            @default(true)
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
@@ -44,6 +48,7 @@ model Gym {
   trainers       Trainer[]
   memberImports  MemberImport[]
   leads          Lead[]
+  invites        GymInvite[]
 
   @@map("gyms")
 }
@@ -64,10 +69,13 @@ model Session {
 }
 
 model GymUser {
-  gymId     String      @map("gym_id") @db.Uuid
-  userId    String      @map("user_id") @db.Uuid
-  role      GymUserRole
-  isActive  Boolean     @default(true)
+  gymId       String      @map("gym_id") @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  role        GymUserRole
+  /// Granted permission keys for non-owners; owners always have every permission.
+  permissions String[]    @default([])
+  memberScope MemberScope @default(ALL) @map("member_scope")
+  isActive    Boolean     @default(true)
   createdAt DateTime    @default(now()) @map("created_at")
   gym       Gym         @relation(fields: [gymId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -76,17 +84,43 @@ model GymUser {
   @@map("gym_users")
 }
 
+model GymInvite {
+  id               String      @id @default(uuid()) @db.Uuid
+  gymId            String      @map("gym_id") @db.Uuid
+  tokenHash        String      @unique @map("token_hash")
+  inviteeName      String?     @map("invitee_name")
+  role             GymUserRole
+  permissions      String[]    @default([])
+  memberScope      MemberScope @default(ALL) @map("member_scope")
+  trainerId        String?     @map("trainer_id") @db.Uuid
+  invitedByUserId  String      @map("invited_by_user_id") @db.Uuid
+  expiresAt        DateTime    @map("expires_at")
+  acceptedAt       DateTime?   @map("accepted_at")
+  acceptedByUserId String?     @map("accepted_by_user_id") @db.Uuid
+  revokedAt        DateTime?   @map("revoked_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  gym              Gym         @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  trainer          Trainer?    @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  invitedBy        User        @relation("InviteSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  acceptedBy       User?       @relation("InviteAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([gymId, acceptedAt, revokedAt, expiresAt])
+  @@map("gym_invites")
+}
+
 model Trainer {
   id             String                        @id @default(uuid()) @db.Uuid
   gymId          String                        @map("gym_id") @db.Uuid
-  userId         String?                       @unique @map("user_id") @db.Uuid
+  userId         String?                       @map("user_id") @db.Uuid
   fullName       String
   isActive       Boolean                       @default(true)
   createdAt      DateTime                      @default(now()) @map("created_at")
   assignments    MembershipTrainerAssignment[]
   incentiveRules TrainerIncentiveRule[]
+  invites        GymInvite[]
   gym            Gym                           @relation(fields: [gymId], references: [id], onDelete: Cascade)
 
+  @@unique([gymId, userId])
   @@index([gymId, isActive])
   @@map("trainers")
 }
@@ -434,6 +468,11 @@ enum GymUserRole {
   OWNER
   STAFF
   TRAINER
+}
+
+enum MemberScope {
+  ALL
+  ASSIGNED
 }
 
 enum MemberRecordStatus {

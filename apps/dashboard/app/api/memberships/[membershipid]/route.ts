@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -44,7 +44,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
   const current = await prisma.membership.findFirst({
-    where: { id: membershipId, member: { gymId: auth.session.activeGym.id } },
+    where: { id: membershipId, member: memberAccessWhere(auth.session) },
     select: {
       id: true,
       memberId: true,
@@ -174,7 +174,7 @@ export async function DELETE(
 
   const { membershipid: membershipId } = await context.params;
   const membership = await prisma.membership.findFirst({
-    where: { id: membershipId, member: { gymId: session.activeGym.id } },
+    where: { id: membershipId, member: memberAccessWhere(session) },
     select: { id: true },
   });
   if (!membership) return NextResponse.json({ error: "Membership not found." }, { status: 404 });

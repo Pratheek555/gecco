@@ -1,12 +1,12 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { type AuthorizedSession, memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
-async function getScopedNote(noteId: string, memberId: string, gymId: string) {
+async function getScopedNote(noteId: string, memberId: string, session: AuthorizedSession) {
   return prisma.memberNote.findFirst({
-    where: { id: noteId, memberId, member: { gymId } },
+    where: { id: noteId, memberId, member: memberAccessWhere(session) },
     select: { id: true },
   });
 }
@@ -30,7 +30,7 @@ export async function PATCH(
       { error: "Remark must be between 1 and 2,000 characters." },
       { status: 400 },
     );
-  const note = await getScopedNote(noteId, memberId, auth.session.activeGym.id);
+  const note = await getScopedNote(noteId, memberId, auth.session);
   if (!note) return NextResponse.json({ error: "Remark not found." }, { status: 404 });
   return NextResponse.json(
     await prisma.memberNote.update({
@@ -48,7 +48,7 @@ export async function DELETE(
   const auth = await requirePermission("members:write");
   if (!auth.ok) return auth.response;
   const { memberid: memberId, noteid: noteId } = await context.params;
-  const note = await getScopedNote(noteId, memberId, auth.session.activeGym.id);
+  const note = await getScopedNote(noteId, memberId, auth.session);
   if (!note) return NextResponse.json({ error: "Remark not found." }, { status: 404 });
   await prisma.memberNote.delete({ where: { id: note.id } });
   return NextResponse.json({ id: note.id, deleted: true });

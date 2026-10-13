@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { verifySession } from "../lib/dal";
+import { requirePageAccess } from "../lib/dal";
 
 export default async function MembershipsLayout({ children }: { children: ReactNode }) {
-  await verifySession();
+  await requirePageAccess("memberships:read");
   return children;
 }

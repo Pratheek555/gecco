@@ -9,7 +9,11 @@ const PUBLIC_PATHS = new Set(["/login", "/signup"]);
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.has(pathname) || request.cookies.has("gecco_session")) {
+  if (
+    PUBLIC_PATHS.has(pathname) ||
+    pathname.startsWith("/invite/") ||
+    request.cookies.has("gecco_session")
+  ) {
     return NextResponse.next();
   }
 

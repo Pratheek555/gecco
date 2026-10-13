@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { verifySession } from "../lib/dal";
+import { requirePageAccess } from "../lib/dal";
 
 export const metadata: Metadata = {
   title: "Leads | Gecco",
@@ -8,6 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function LeadsLayout({ children }: { children: ReactNode }) {
-  await verifySession();
+  await requirePageAccess("leads:read");
   return children;
 }
