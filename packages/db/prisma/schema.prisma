@@ -21,6 +21,7 @@ model User {
   sessions       Session[]
   memberImports  MemberImport[]
   leadActivities LeadActivity[] @relation("LeadActivityAuthor")
+  assignedLeads  Lead[]         @relation("LeadAssignee")
 
   @@map("users")
 }
@@ -205,28 +206,35 @@ model MemberNote {
 }
 
 model Lead {
-  id                String         @id @default(uuid()) @db.Uuid
-  gymId             String         @map("gym_id") @db.Uuid
-  fullName          String         @map("full_name")
+  id                String          @id @default(uuid()) @db.Uuid
+  gymId             String          @map("gym_id") @db.Uuid
+  fullName          String          @map("full_name")
   phone             String?
   email             String?
-  source            LeadSource     @default(OTHER)
-  status            LeadStatus     @default(NEW)
-  interestedPlan    PlanType?      @map("interested_plan")
-  nextFollowUpAt    DateTime?      @map("next_follow_up_at")
-  lastContactedAt   DateTime?      @map("last_contacted_at")
-  lostReason        String?        @map("lost_reason")
-  convertedMemberId String?        @unique @map("converted_member_id") @db.Uuid
-  convertedAt       DateTime?      @map("converted_at")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-  gym               Gym            @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  convertedMember   Member?        @relation(fields: [convertedMemberId], references: [id], onDelete: SetNull)
+  source            LeadSource      @default(OTHER)
+  status            LeadStatus      @default(NEW)
+  interestedPlan    PlanType?       @map("interested_plan")
+  nextFollowUpAt    DateTime?       @map("next_follow_up_at")
+  lastContactedAt   DateTime?       @map("last_contacted_at")
+  lostReasonCode    LeadLostReason? @map("lost_reason_code")
+  lostReason        String?         @map("lost_reason")
+  assignedToUserId  String?         @map("assigned_to_user_id") @db.Uuid
+  trialAt           DateTime?       @map("trial_at")
+  firstContactedAt  DateTime?       @map("first_contacted_at")
+  convertedMemberId String?         @unique @map("converted_member_id") @db.Uuid
+  convertedAt       DateTime?       @map("converted_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  gym               Gym             @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  convertedMember   Member?         @relation(fields: [convertedMemberId], references: [id], onDelete: SetNull)
+  assignedTo        User?           @relation("LeadAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   activities        LeadActivity[]
 
   @@index([gymId, status, updatedAt])
   @@index([gymId, nextFollowUpAt])
   @@index([gymId, fullName])
+  @@index([gymId, trialAt])
+  @@index([gymId, assignedToUserId])
   @@map("leads")
 }
 
@@ -501,6 +509,18 @@ enum LeadActivityType {
   STATUS_CHANGE
   FOLLOW_UP
   CONVERSION
+  TRIAL
+  ASSIGNMENT
+}
+
+enum LeadLostReason {
+  PRICE
+  LOCATION
+  TIMING
+  JOINED_ELSEWHERE
+  NO_RESPONSE
+  NOT_INTERESTED
+  OTHER
 }
 
 enum PaymentStatus {

@@ -26,11 +26,24 @@ export const leadActivityTypes = [
   "STATUS_CHANGE",
   "FOLLOW_UP",
   "CONVERSION",
+  "TRIAL",
+  "ASSIGNMENT",
+] as const;
+
+export const leadLostReasons = [
+  "PRICE",
+  "LOCATION",
+  "TIMING",
+  "JOINED_ELSEWHERE",
+  "NO_RESPONSE",
+  "NOT_INTERESTED",
+  "OTHER",
 ] as const;
 
 export type LeadStatus = (typeof leadStatuses)[number];
 export type LeadSource = (typeof leadSources)[number];
 export type LeadActivityType = (typeof leadActivityTypes)[number];
+export type LeadLostReason = (typeof leadLostReasons)[number];
 export type InterestedPlan = "GT" | "PT" | null;
 
 export type LeadInput = {
@@ -39,8 +52,21 @@ export type LeadInput = {
   email: string | null;
   source: LeadSource;
   interestedPlan: InterestedPlan;
+  status: Exclude<LeadStatus, "WON">;
   nextFollowUpAt: Date | null;
+  trialAt: Date | null;
+  assignedToUserId: string | null;
+  lostReasonCode: LeadLostReason | null;
   lostReason: string | null;
+};
+
+export const leadStatusLabels: Record<LeadStatus, string> = {
+  NEW: "New",
+  CONTACTED: "Contacted",
+  TRIAL_BOOKED: "Trial booked",
+  TRIAL_COMPLETED: "Trial completed",
+  WON: "Won",
+  LOST: "Lost",
 };
 
 type ValidationResult = { ok: true; data: LeadInput } | { ok: false; error: string };
@@ -52,6 +78,25 @@ function optionalText(value: unknown) {
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Last 10 digits of a phone number, so "+91 98765 43210" and "098765-43210" match. */
+export function phoneKey(phone: string | null) {
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  return digits.length >= 6 ? digits.slice(-10) : null;
+}
+
+/**
+ * Parses an optional ISO date field. Returns undefined for an invalid value so
+ * callers can report it, and null when the field is empty.
+ */
+export function optionalDate(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string") return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 export function parseLeadInput(payload: unknown): ValidationResult {
@@ -89,19 +134,41 @@ export function parseLeadInput(payload: unknown): ValidationResult {
     return { ok: false, error: "Lost reason must be 500 characters or fewer." };
   }
 
-  let nextFollowUpAt: Date | null = null;
+  const nextFollowUpAt = optionalDate(body.nextFollowUpAt);
+  if (nextFollowUpAt === undefined) {
+    return { ok: false, error: "Follow-up must be a valid date and time." };
+  }
+  const trialAt = optionalDate(body.trialAt);
+  if (trialAt === undefined) {
+    return { ok: false, error: "Trial must be a valid date and time." };
+  }
+
+  const status = body.status ?? "NEW";
+  if (typeof status !== "string" || !leadStatuses.includes(status as LeadStatus)) {
+    return { ok: false, error: "Select a valid lead status." };
+  }
+  if (status === "WON") {
+    return { ok: false, error: "Convert this lead to a member to mark it as won." };
+  }
+
+  const assignedToUserId = body.assignedToUserId ?? null;
   if (
-    body.nextFollowUpAt !== null &&
-    body.nextFollowUpAt !== undefined &&
-    body.nextFollowUpAt !== ""
+    assignedToUserId !== null &&
+    (typeof assignedToUserId !== "string" || !uuidPattern.test(assignedToUserId))
   ) {
-    if (typeof body.nextFollowUpAt !== "string") {
-      return { ok: false, error: "Follow-up must be a valid date and time." };
-    }
-    nextFollowUpAt = new Date(body.nextFollowUpAt);
-    if (Number.isNaN(nextFollowUpAt.getTime())) {
-      return { ok: false, error: "Follow-up must be a valid date and time." };
-    }
+    return { ok: false, error: "Select a valid lead owner." };
+  }
+
+  const lostReasonCode = status === "LOST" ? (body.lostReasonCode ?? null) : null;
+  if (status === "LOST" && !leadLostReasons.includes(lostReasonCode as LeadLostReason)) {
+    return { ok: false, error: "Select why this lead was lost." };
+  }
+  if (status === "TRIAL_BOOKED" && !trialAt) {
+    return { ok: false, error: "Pick the trial date and time." };
+  }
+  // Every open lead needs a next step: either a follow-up or an upcoming trial.
+  if (status !== "LOST" && !nextFollowUpAt && !(status === "TRIAL_BOOKED" && trialAt)) {
+    return { ok: false, error: "Schedule the next follow-up so this lead is not forgotten." };
   }
 
   return {
@@ -112,8 +179,12 @@ export function parseLeadInput(payload: unknown): ValidationResult {
       email,
       source: source as LeadSource,
       interestedPlan: interestedPlan as InterestedPlan,
-      nextFollowUpAt,
-      lostReason,
+      status: status as LeadInput["status"],
+      nextFollowUpAt: status === "LOST" ? null : nextFollowUpAt,
+      trialAt: status === "TRIAL_BOOKED" || status === "TRIAL_COMPLETED" ? trialAt : null,
+      assignedToUserId: assignedToUserId as string | null,
+      lostReasonCode: lostReasonCode as LeadLostReason | null,
+      lostReason: status === "LOST" ? lostReason : null,
     },
   };
 }
@@ -128,7 +199,11 @@ export const leadListSelect = {
   interestedPlan: true,
   nextFollowUpAt: true,
   lastContactedAt: true,
+  lostReasonCode: true,
   lostReason: true,
+  trialAt: true,
+  firstContactedAt: true,
+  assignedTo: { select: { id: true, fullName: true } },
   convertedAt: true,
   convertedMemberId: true,
   createdAt: true,
@@ -141,6 +216,8 @@ export function serializeLead<
   T extends {
     nextFollowUpAt: Date | null;
     lastContactedAt: Date | null;
+    trialAt: Date | null;
+    firstContactedAt: Date | null;
     convertedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
@@ -150,6 +227,8 @@ export function serializeLead<
     ...lead,
     nextFollowUpAt: lead.nextFollowUpAt?.toISOString() ?? null,
     lastContactedAt: lead.lastContactedAt?.toISOString() ?? null,
+    trialAt: lead.trialAt?.toISOString() ?? null,
+    firstContactedAt: lead.firstContactedAt?.toISOString() ?? null,
     convertedAt: lead.convertedAt?.toISOString() ?? null,
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
