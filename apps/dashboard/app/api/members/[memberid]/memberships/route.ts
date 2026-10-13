@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -80,7 +80,7 @@ export async function POST(
 
   const [member, plan] = await Promise.all([
     prisma.member.findFirst({
-      where: { id: memberId, gymId: session.activeGym.id },
+      where: { id: memberId, ...memberAccessWhere(session) },
       select: { id: true },
     }),
     prisma.plan.findFirst({

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ export async function GET() {
   const { session } = auth;
 
   const memberships = await prisma.membership.findMany({
-    where: { member: { gymId: session.activeGym.id }, status: "ACTIVE" },
+    where: { member: memberAccessWhere(session), status: "ACTIVE" },
     orderBy: [{ endsOn: "asc" }, { createdAt: "desc" }],
     select: {
       id: true,

@@ -38,7 +38,7 @@ function monthBoundaries(key: string) {
 }
 
 export async function GET(request: Request) {
-  const auth = await requirePermission("overview:read");
+  const auth = await requirePermission("overview:read", { fullMemberScope: true });
   if (!auth.ok) return auth.response;
   const { session } = auth;
 

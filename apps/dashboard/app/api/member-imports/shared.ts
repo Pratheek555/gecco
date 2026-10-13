@@ -43,7 +43,7 @@ export async function getAuthorizedImport(
   importId: string,
   permission: "members:read" | "members:write",
 ) {
-  const auth = await requirePermission(permission);
+  const auth = await requirePermission(permission, { fullMemberScope: true });
   if (!auth.ok) return auth;
 
   const memberImport = await prisma.memberImport.findFirst({

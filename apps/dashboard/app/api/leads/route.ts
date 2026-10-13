@@ -1,18 +1,22 @@
 import { prisma } from "db/client";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/app/api/auth/authorization";
-import { leadListSelect, parseLeadInput, serializeLead } from "./shared";
+import { findLeadDuplicates, isLeadTeamMember, leadTeam } from "./server";
+import { leadListSelect, leadStatusLabels, parseLeadInput, serializeLead } from "./shared";
 
 export async function GET() {
   const auth = await requirePermission("leads:read");
   if (!auth.ok) return auth.response;
 
   const gymId = auth.session.activeGym.id;
-  const leads = await prisma.lead.findMany({
-    where: { gymId },
-    orderBy: [{ nextFollowUpAt: "asc" }, { updatedAt: "desc" }],
-    select: leadListSelect,
-  });
+  const [leads, team] = await Promise.all([
+    prisma.lead.findMany({
+      where: { gymId },
+      orderBy: [{ nextFollowUpAt: "asc" }, { updatedAt: "desc" }],
+      select: leadListSelect,
+    }),
+    leadTeam(gymId),
+  ]);
 
   const gymDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: auth.session.activeGym.timezone,
@@ -27,6 +31,9 @@ export async function GET() {
 
   return NextResponse.json({
     leads: leads.map(serializeLead),
+    team: team.map(({ role, user }) => ({ id: user.id, fullName: user.fullName, role })),
+    currentUserId: auth.session.user.id,
+    gymName: auth.session.activeGym.name,
     summary: {
       active: active.length,
       dueToday: active.filter(
@@ -38,6 +45,11 @@ export async function GET() {
       trials: active.filter(
         (lead) => lead.status === "TRIAL_BOOKED" || lead.status === "TRIAL_COMPLETED",
       ).length,
+      trialsToday: active.filter(
+        (lead) =>
+          lead.status === "TRIAL_BOOKED" && lead.trialAt && gymDate.format(lead.trialAt) === today,
+      ).length,
+      uncontacted: active.filter((lead) => lead.status === "NEW" && !lead.firstContactedAt).length,
       converted,
       conversionRate: closed ? Math.round((converted / closed) * 100) : 0,
     },
@@ -58,20 +70,49 @@ export async function POST(request: Request) {
   const parsed = parseLeadInput(payload);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const body = payload as Record<string, unknown>;
+  const gymId = auth.session.activeGym.id;
+  const { status } = parsed.data;
+  if (status !== "NEW" && status !== "CONTACTED" && status !== "TRIAL_BOOKED") {
+    return NextResponse.json(
+      { error: "New leads can start as New, Contacted, or Trial booked." },
+      { status: 400 },
+    );
+  }
+
+  const assignedToUserId = parsed.data.assignedToUserId ?? auth.session.user.id;
+  if (!(await isLeadTeamMember(gymId, assignedToUserId))) {
+    return NextResponse.json({ error: "Select a valid lead owner." }, { status: 400 });
+  }
+
+  if (body.allowDuplicate !== true) {
+    const duplicates = await findLeadDuplicates(gymId, parsed.data);
+    if (duplicates.length) {
+      return NextResponse.json(
+        { error: "This phone number or email is already in your gym.", duplicates },
+        { status: 409 },
+      );
+    }
+  }
+
   const note = typeof body.note === "string" ? body.note.trim() : "";
   if (note.length > 2_000) {
     return NextResponse.json({ error: "Note must be 2,000 characters or fewer." }, { status: 400 });
   }
 
+  const now = new Date();
+  const contacted = status !== "NEW";
   const lead = await prisma.lead.create({
     data: {
-      gymId: auth.session.activeGym.id,
+      gymId,
       ...parsed.data,
+      assignedToUserId,
+      firstContactedAt: contacted ? now : null,
+      lastContactedAt: contacted ? now : null,
       activities: {
         create: [
           {
             type: "STATUS_CHANGE",
-            body: "Lead added to the pipeline as New.",
+            body: `Lead added to the pipeline as ${leadStatusLabels[status]}.`,
             createdByUserId: auth.session.user.id,
           },
           ...(note

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
-import { requirePermission } from "@/app/api/auth/authorization";
+import { memberRelationWhere, requirePermission } from "@/app/api/auth/authorization";
 
 export const runtime = "nodejs";
 
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const requestedLimit = Number(searchParams.get("limit") ?? "50");
   const take = Number.isInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 100) : 50;
   const payments = await prisma.payment.findMany({
-    where: { gymId: session.activeGym.id, ...(status ? { status } : {}), ...(start && exclusiveEnd ? { paidOn: { gte: start, lt: exclusiveEnd } } : {}) },
+    where: { gymId: session.activeGym.id, ...memberRelationWhere(session), ...(status ? { status } : {}), ...(start && exclusiveEnd ? { paidOn: { gte: start, lt: exclusiveEnd } } : {}) },
     orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }],
     take,
     select: {

@@ -12,6 +12,7 @@ import {
   LogOut,
   TrendingUp,
   Target,
+  UserPlus,
   Users,
   WalletCards,
   X,
@@ -19,26 +20,31 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useSession, type CurrentSession } from "./session-provider";
+import type { Permission } from "./api/auth/permissions";
 
-const navigation = [
+const navigation: Array<{
+  label: string;
+  items: Array<{ label: string; icon: typeof Users; href: string; permission: Permission; badge?: string }>;
+}> = [
   {
     label: "Workspace",
     items: [
-      { label: "Overview", icon: LayoutDashboard, href: "/dashboard" },
-      { label: "Members", icon: Users, href: "/members" },
-      { label: "Leads", icon: Target, href: "/leads" },
+      { label: "Overview", icon: LayoutDashboard, href: "/dashboard", permission: "overview:read" },
+      { label: "Members", icon: Users, href: "/members", permission: "members:read" },
+      { label: "Leads", icon: Target, href: "/leads", permission: "leads:read" },
       // { label: "Attendance", icon: Activity, href: "/attendance" },
-      { label: "Payments", icon: WalletCards, href: "/payments" },
-      { label: "Messages", icon: MessageCircle, href: "/messages", badge: undefined },
+      { label: "Payments", icon: WalletCards, href: "/payments", permission: "payments:read" },
+      { label: "Messages", icon: MessageCircle, href: "/messages", permission: "members:read" },
     ],
   },
   {
     label: "Manage",
     items: [
-      { label: "Memberships", icon: CreditCard, href: "/memberships" },
-      { label: "Trainers", icon: Dumbbell, href: "/trainers" },
+      { label: "Memberships", icon: CreditCard, href: "/memberships", permission: "memberships:read" },
+      { label: "Trainers", icon: Dumbbell, href: "/trainers", permission: "trainers:read" },
+      { label: "Team", icon: UserPlus, href: "/team", permission: "team:manage" },
       // { label: "Reports", icon: BarChart3, href: "/reports" },
-      { label: "Automations", icon: Zap, href: "/automations", badge: "NEW" },
+      { label: "Automations", icon: Zap, href: "/automations", permission: "gym:manage", badge: "NEW" },
     ],
   },
 ];
@@ -99,9 +105,13 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
     }
   }
 
-  function signOut() {
+  async function signOut() {
     onClose();
-    router.replace("/login");
+    try {
+      await fetch("/api/session", { method: "DELETE" });
+    } finally {
+      router.replace("/login");
+    }
   }
 
   const activeGym = session?.activeGym;
@@ -163,10 +173,15 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
           )}
         </div>
         <nav className="main-nav" aria-label="Primary navigation">
-          {navigation.map((group) => (
+          {navigation.map((group) => {
+            const items = group.items.filter((item) =>
+              session?.activeGym.permissions.includes(item.permission),
+            );
+            if (!items.length) return null;
+            return (
             <div className="nav-group" key={group.label}>
               <div className="nav-label">{group.label}</div>
-              {group.items.map(({ label, icon: Icon, href, badge }) => {
+              {items.map(({ label, icon: Icon, href, badge }) => {
                 const active = pathname === href;
                 return (
                   <Link
@@ -185,7 +200,8 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </nav>
         <div className="sidebar-bottom">
           <button
@@ -201,7 +217,7 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
             <CircleHelp size={18} />
             <span>Help & support</span>
           </button>
-          <button className="nav-item" onClick={signOut}>
+          <button className="nav-item" onClick={() => void signOut()}>
             <LogOut size={18} />
             <span>Sign out</span>
           </button>

@@ -32,7 +32,7 @@ function getR2Config() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requirePermission("members:write");
+  const auth = await requirePermission("members:write", { fullMemberScope: true });
   if (!auth.ok) return auth.response;
 
   let body: CreateImportBody;

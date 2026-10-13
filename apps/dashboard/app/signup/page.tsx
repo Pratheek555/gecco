@@ -22,7 +22,7 @@ export default function SignupPage() {
           <ul className={styles.benefits}>
             <li><span>✓</span> Your first gym workspace is ready in minutes</li>
             <li><span>✓</span> Start with Cash and UPI payment modes</li>
-            <li><span>✓</span> Invite your staff when you are ready</li>
+            <li><span>✓</span> Invite trainers and staff, and choose what each one sees</li>
           </ul>
         </div>
         <p className={styles.note}>Built for fitness teams that want clarity, not clutter.</p>

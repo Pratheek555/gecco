@@ -1,0 +1,56 @@
+.card { margin-top: 18px; overflow: hidden; }
+.card > header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.card > header h2 { margin: 0; color: var(--text); font-size: 16px; }
+.card > header p { margin: 4px 0 0; color: var(--text-soft); font-size: 12px; }
+.loading { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 22px; color: var(--text-soft); font-size: 13px; }
+.empty { margin: 0; padding: 22px 20px; color: var(--text-faint); font-size: 13px; }
+
+.list { margin: 0; padding: 0; list-style: none; }
+.list li { display: grid; grid-template-columns: minmax(180px, 1.2fr) 120px minmax(200px, 2fr) auto; gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.list li:last-child { border-bottom: 0; }
+.list li.inactive { opacity: .62; }
+.person { display: grid; gap: 3px; min-width: 0; }
+.person strong { color: var(--text); font-size: 13px; }
+.person small { overflow: hidden; color: var(--text-faint); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.role { display: inline-flex; padding: 3px 9px; color: var(--brand); background: var(--brand-soft); border-radius: 99px; font-size: 11px; font-weight: 680; }
+.summary { display: grid; gap: 3px; margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.45; }
+.summary small { color: var(--text-faint); font-size: 11px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.danger { color: var(--red) !important; }
+
+.wideModal { width: min(620px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; }
+.hint { margin: 0; color: var(--text-faint); font-size: 11px; line-height: 1.5; }
+.error { margin: 0 0 4px; padding: 9px 11px; color: var(--red); background: var(--red-soft); border-radius: 7px; font-size: 12px; }
+
+.accessEditor { display: grid; gap: 16px; margin-bottom: 14px; }
+.scope { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.scope legend { margin-bottom: 8px; padding: 0; color: var(--text-soft); font-size: 12px; font-weight: 650; }
+.scope label { display: flex !important; align-items: flex-start; gap: 10px; margin: 0 !important; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; cursor: pointer; }
+.scope label:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+.scope input { width: 15px !important; height: 15px !important; margin-top: 2px; padding: 0 !important; accent-color: var(--brand); }
+.scope span { display: grid !important; gap: 2px; }
+.scope strong { color: var(--text); font-size: 12.5px; }
+.scope small { color: var(--text-faint); font-size: 11px; font-weight: 400; }
+
+.sections { display: grid; border: 1px solid var(--border); border-radius: 9px; }
+.sectionRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 12px; border-bottom: 1px solid var(--border); }
+.sectionRow:last-child { border-bottom: 0; }
+.sectionRow > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.sectionRow strong { color: var(--text); font-size: 12.5px; }
+.sectionRow small { color: var(--text-faint); font-size: 11px; line-height: 1.4; }
+.levels { display: inline-flex; flex: 0 0 auto; padding: 2px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 8px; }
+.levels button { height: 28px; padding: 0 11px; color: var(--text-soft); background: transparent; border: 0; border-radius: 6px; font-size: 11.5px; font-weight: 650; }
+.levels button:disabled { cursor: not-allowed; opacity: .45; }
+.levels .levelActive { color: var(--text); background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.12); opacity: 1 !important; }
+.ownerOnly { margin: 0; color: var(--text-faint); font-size: 11px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .summary, .actions { grid-column: 1 / -1; }
+  .actions { justify-content: flex-start; }
+}
+@media (max-width: 520px) {
+  .sectionRow { flex-direction: column; align-items: stretch; }
+  .levels { align-self: flex-start; }
+}
