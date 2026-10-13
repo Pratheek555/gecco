@@ -42,6 +42,7 @@ import {
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../_components/managed-page-ui";
 import { useDashboardToast } from "../manage-shell";
+import "./leads.css";
 
 type LeadStatus = "NEW" | "CONTACTED" | "TRIAL_BOOKED" | "TRIAL_COMPLETED" | "WON" | "LOST";
 type LeadSource =
@@ -332,7 +333,7 @@ function nextStep(lead: Lead): { label: string; tone: Tone; icon: LucideIcon } {
   if (lead.status === "TRIAL_BOOKED" && lead.trialAt) {
     if (new Date(lead.trialAt) < dayBounds().start)
       return { label: "Trial passed · update it", tone: "amber", icon: CalendarX };
-    return { label: `Trial ${formatWhen(lead.trialAt)}`, tone: "violet", icon: CalendarCheck };
+    return { label: `Trial · ${formatWhen(lead.trialAt)}`, tone: "violet", icon: CalendarCheck };
   }
   const state = followUpState(lead);
   if (state === "overdue")
@@ -347,7 +348,8 @@ function nextStep(lead: Lead): { label: string; tone: Tone; icon: LucideIcon } {
 /** Lower is more urgent. */
 function urgency(lead: Lead) {
   if (!isOpen(lead)) return Number.MAX_SAFE_INTEGER;
-  if (lead.status === "NEW" && !lead.firstContactedAt) return new Date(lead.createdAt).getTime() - 1e13;
+  if (lead.status === "NEW" && !lead.firstContactedAt)
+    return new Date(lead.createdAt).getTime() - 1e13;
   const when =
     lead.status === "TRIAL_BOOKED" && lead.trialAt && !lead.nextFollowUpAt
       ? lead.trialAt
@@ -565,9 +567,7 @@ function LeadEditor({
     lead ? toLocalInput(lead.nextFollowUpAt) : toLocalInput(presetDate("1h")),
   );
   const [trialAt, setTrialAt] = useState(toLocalInput(lead?.trialAt ?? null));
-  const [lostReasonCode, setLostReasonCode] = useState<LostReason | "">(
-    lead?.lostReasonCode ?? "",
-  );
+  const [lostReasonCode, setLostReasonCode] = useState<LostReason | "">(lead?.lostReasonCode ?? "");
   const [lostReason, setLostReason] = useState(lead?.lostReason ?? "");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
@@ -637,7 +637,9 @@ function LeadEditor({
     >
       <form className="modal ld-editor" onSubmit={submit}>
         <div className="ld-editor-head">
-          <span className="ld-editor-icon">{lead ? <Edit3 size={18} /> : <UserPlus size={18} />}</span>
+          <span className="ld-editor-icon">
+            {lead ? <Edit3 size={18} /> : <UserPlus size={18} />}
+          </span>
           <div>
             <h2 id="lead-editor-title">{lead ? `Edit ${lead.fullName}` : "New enquiry"}</h2>
             <p>
@@ -776,7 +778,9 @@ function LeadEditor({
                   onChange={setNextFollowUpAt}
                   required={followUpRequired}
                   disabled={saving}
-                  label={followUpRequired ? "Follow up" : "Follow up (optional — the trial is next)"}
+                  label={
+                    followUpRequired ? "Follow up" : "Follow up (optional — the trial is next)"
+                  }
                 />
               </div>
             )}
@@ -930,7 +934,13 @@ function TrialRow({
 
   const booked = lead.status === "TRIAL_BOOKED" && lead.trialAt;
   const trialPassed = booked && new Date(lead.trialAt!) < new Date();
-  const tone: Tone = trialPassed ? "amber" : booked ? "violet" : lead.status === "TRIAL_COMPLETED" ? "teal" : "grey";
+  const tone: Tone = trialPassed
+    ? "amber"
+    : booked
+      ? "violet"
+      : lead.status === "TRIAL_COMPLETED"
+        ? "teal"
+        : "grey";
 
   return (
     <div className={`ld-step-row tone-${tone}`}>
@@ -1333,11 +1343,7 @@ function LeadDrawer({
                     <span>Opens WhatsApp ready to send</span>
                   </div>
                   {templates.map((template) => (
-                    <button
-                      type="button"
-                      key={template.key}
-                      onClick={() => sendTemplate(template)}
-                    >
+                    <button type="button" key={template.key} onClick={() => sendTemplate(template)}>
                       <span>
                         <strong>{template.label}</strong>
                         <em>{templateText(template, lead)}</em>
@@ -1379,12 +1385,20 @@ function LeadDrawer({
                     <div className="ld-step-copy">
                       <small>Follow-up</small>
                       <strong>
-                        {lead.nextFollowUpAt ? formatWhen(lead.nextFollowUpAt) : "Not scheduled"}
+                        {lead.nextFollowUpAt
+                          ? formatWhen(lead.nextFollowUpAt)
+                          : lead.status === "TRIAL_BOOKED" && lead.trialAt
+                            ? "Not needed — the trial is next"
+                            : "Not scheduled"}
                       </strong>
                       {followState === "overdue" && <em>Overdue — reach out and reschedule</em>}
                     </div>
                   </div>
-                  <TrialRow key={`${lead.status}-${lead.trialAt}`} lead={lead} onChanged={refresh} />
+                  <TrialRow
+                    key={`${lead.status}-${lead.trialAt}`}
+                    lead={lead}
+                    onChanged={refresh}
+                  />
                 </section>
               )}
 
@@ -1441,7 +1455,11 @@ function LeadDrawer({
                 <>
                   {!lead.convertedMemberId && (
                     <form className="ld-composer" onSubmit={addActivity}>
-                      <div className="ld-composer-types" role="radiogroup" aria-label="Activity type">
+                      <div
+                        className="ld-composer-types"
+                        role="radiogroup"
+                        aria-label="Activity type"
+                      >
                         {(["NOTE", "CALL", "WHATSAPP", "EMAIL"] as const).map((type) => {
                           const Icon = type === "NOTE" ? Edit3 : activityIcons[type]!;
                           return (
@@ -1818,6 +1836,35 @@ function QueueAction({
   );
 }
 
+/** Response speed and source mix over the last 30 days. */
+function leadInsights(leads: Lead[]) {
+  const since = Date.now() - 30 * 86_400_000;
+  const recent = leads.filter((lead) => new Date(lead.createdAt).getTime() >= since);
+  const replies = recent
+    .filter((lead) => lead.firstContactedAt)
+    .map(
+      (lead) =>
+        (new Date(lead.firstContactedAt!).getTime() - new Date(lead.createdAt).getTime()) / 60_000,
+    )
+    .sort((a, b) => a - b);
+  const median = replies.length ? replies[Math.floor(replies.length / 2)] : null;
+  const withinHour = recent.length
+    ? Math.round((replies.filter((minutes) => minutes <= 60).length / recent.length) * 100)
+    : null;
+  const sources = sourceOptions
+    .map((option) => {
+      const fromSource = recent.filter((lead) => lead.source === option.value);
+      return {
+        ...option,
+        count: fromSource.length,
+        won: fromSource.filter((lead) => lead.status === "WON").length,
+      };
+    })
+    .filter((item) => item.count)
+    .sort((a, b) => b.count - a.count);
+  return { recent: recent.length, median, withinHour, sources };
+}
+
 function TodayView({
   leads,
   openLead,
@@ -1846,34 +1893,7 @@ function TodayView({
       .sort((a, b) => new Date(a.trialAt!).getTime() - new Date(b.trialAt!).getTime());
   }, [leads]);
 
-  const insights = useMemo(() => {
-    const since = Date.now() - 30 * 86_400_000;
-    const recent = leads.filter((lead) => new Date(lead.createdAt).getTime() >= since);
-    const replies = recent
-      .filter((lead) => lead.firstContactedAt)
-      .map(
-        (lead) =>
-          (new Date(lead.firstContactedAt!).getTime() - new Date(lead.createdAt).getTime()) /
-          60_000,
-      )
-      .sort((a, b) => a - b);
-    const median = replies.length ? replies[Math.floor(replies.length / 2)] : null;
-    const withinHour = recent.length
-      ? Math.round((replies.filter((minutes) => minutes <= 60).length / recent.length) * 100)
-      : null;
-    const sources = sourceOptions
-      .map((option) => {
-        const fromSource = recent.filter((lead) => lead.source === option.value);
-        return {
-          ...option,
-          count: fromSource.length,
-          won: fromSource.filter((lead) => lead.status === "WON").length,
-        };
-      })
-      .filter((item) => item.count)
-      .sort((a, b) => b.count - a.count);
-    return { recent: recent.length, median, withinHour, sources };
-  }, [leads]);
+  const insights = useMemo(() => leadInsights(leads), [leads]);
   const maxSource = Math.max(1, ...insights.sources.map((item) => item.count));
 
   return (
@@ -1994,7 +2014,9 @@ function TodayView({
               ))}
             </ol>
           ) : (
-            <p className="ld-empty-note">No trials booked yet. Every enquiry should be offered one.</p>
+            <p className="ld-empty-note">
+              No trials booked yet. Every enquiry should be offered one.
+            </p>
           )}
         </section>
 
@@ -2038,7 +2060,7 @@ function TodayView({
                   </span>
                   <span className="ld-sources-count">
                     {item.count}
-                    {item.won ? <small>{item.won} joined</small> : null}
+                    {item.won ? <small>· {item.won} joined</small> : null}
                   </span>
                 </li>
               ))}
