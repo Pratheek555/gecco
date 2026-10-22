@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/login", "/signup"]);
+const PUBLIC_PATHS = new Set(["/login", "/signup", "/forgot-password"]);
 
 /**
  * Fast, cookie-only gate for page requests. Database validation happens in
@@ -12,6 +12,8 @@ export function proxy(request: NextRequest) {
   if (
     PUBLIC_PATHS.has(pathname) ||
     pathname.startsWith("/invite/") ||
+    pathname.startsWith("/signup/") ||
+    pathname.startsWith("/reset-password/") ||
     request.cookies.has("gecco_session")
   ) {
     return NextResponse.next();

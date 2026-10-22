@@ -162,11 +162,23 @@ function InviteTeamStep({ onFinish }: { onFinish: () => void }) {
   );
 }
 
-export default function SignupForm() {
+type SignupFormProps = {
+  /** Token from the single-use signup link. */
+  token: string;
+  defaultGymName: string;
+  /** When the link was issued for a specific owner, only this email can sign up. */
+  lockedEmail: string | null;
+};
+
+export default function SignupForm({ token, defaultGymName, lockedEmail }: SignupFormProps) {
   const router = useRouter();
   const { refreshSession } = useSession();
   const [step, setStep] = useState<Step>(1);
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState<FormValues>(() => ({
+    ...initialValues,
+    email: lockedEmail ?? "",
+    gymName: defaultGymName,
+  }));
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -216,13 +228,14 @@ export default function SignupForm() {
           password: values.password,
           gymName: values.gymName,
           timezone: values.timezone,
+          token,
         }),
       });
       const result = await response.json() as { error?: string };
 
       if (!response.ok) {
         setError(result.error ?? "We could not create your workspace. Please try again.");
-        if (response.status === 409) setStep(1);
+        if (response.status === 409 || response.status === 403) setStep(1);
         return;
       }
 
@@ -259,7 +272,7 @@ export default function SignupForm() {
           </label>
           <label>
             <span>Work email</span>
-            <input type="email" autoComplete="email" value={values.email} onChange={(event) => update("email", event.target.value)} placeholder="you@gym.com" />
+            <input type="email" autoComplete="email" value={values.email} readOnly={Boolean(lockedEmail)} onChange={(event) => update("email", event.target.value)} placeholder="you@gym.com" />
           </label>
           <label>
             <span>Password</span>

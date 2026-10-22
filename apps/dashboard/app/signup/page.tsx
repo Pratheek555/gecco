@@ -1,6 +1,4 @@
-import SignupForm from "./signup-form";
-import styles from "./signup.module.css";
-import Link from "next/link";
+import { SignupClosed, SignupShell } from "./signup-shell";
 
 export const metadata = {
   title: "Create your gym workspace | Gecco",
@@ -9,27 +7,11 @@ export const metadata = {
 
 export default function SignupPage() {
   return (
-    <main className={styles.page}>
-      <section className={styles.intro}>
-        <Link className={styles.brand} href="/">
-          <span className={styles.brandMark}>↗</span>
-          Gecco
-        </Link>
-        <div className={styles.introContent}>
-          <span className={styles.eyebrow}>Gym management, made simple</span>
-          <h1>Build a better routine for your business.</h1>
-          <p>Bring your members, payments, and team into one calm, connected workspace.</p>
-          <ul className={styles.benefits}>
-            <li><span>✓</span> Your first gym workspace is ready in minutes</li>
-            <li><span>✓</span> Start with Cash and UPI payment modes</li>
-            <li><span>✓</span> Invite trainers and staff, and choose what each one sees</li>
-          </ul>
-        </div>
-        <p className={styles.note}>Built for fitness teams that want clarity, not clutter.</p>
-      </section>
-      <section className={styles.panel}>
-        <SignupForm />
-      </section>
-    </main>
+    <SignupShell>
+      <SignupClosed
+        title="Gecco is invite-only"
+        copy="We set up every gym with you personally. Reach out and we'll send you a private link to create your workspace."
+      />
+    </SignupShell>
   );
 }

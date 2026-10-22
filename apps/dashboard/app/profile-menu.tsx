@@ -1,15 +1,15 @@
 "use client";
 
-import { ChevronDown, LogOut, Settings } from "lucide-react";
+import { Building2, ChevronDown, LogOut, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCan, useSession } from "./session-provider";
 
 type ProfileMenuProps = {
   name: string | undefined;
@@ -18,8 +18,10 @@ type ProfileMenuProps = {
   onNotify: (message: string) => void;
 };
 
-export default function ProfileMenu({ name, initials, role, onNotify }: ProfileMenuProps) {
+export default function ProfileMenu({ name, initials, role }: ProfileMenuProps) {
   const router = useRouter();
+  const canManageGym = useCan("gym:manage");
+  const { session } = useSession();
 
   async function signOut() {
     try {
@@ -35,8 +37,8 @@ export default function ProfileMenu({ name, initials, role, onNotify }: ProfileM
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="min-w-52">
       <DropdownMenuGroup>
-        {/*<DropdownMenuLabel>{name}</DropdownMenuLabel>*/}
-        {/*<DropdownMenuItem onSelect={() => onNotify("Settings opened")}><Settings />Settings</DropdownMenuItem>*/}
+        {canManageGym && <DropdownMenuItem onSelect={() => router.push("/settings")}><Settings />Settings</DropdownMenuItem>}
+        {session?.isPlatformAdmin && <DropdownMenuItem onSelect={() => router.push("/admin/gyms")}><Building2 />Onboard gyms</DropdownMenuItem>}
         <DropdownMenuItem variant="destructive" onSelect={() => void signOut()}><LogOut />Sign out</DropdownMenuItem>
       </DropdownMenuGroup>
     </DropdownMenuContent>

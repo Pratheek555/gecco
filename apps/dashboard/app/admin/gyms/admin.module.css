@@ -1,0 +1,27 @@
+.card { margin-top: 18px; overflow: hidden; }
+.card > header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.card > header h2 { margin: 0; color: var(--text); font-size: 16px; }
+.card > header p { margin: 4px 0 0; color: var(--text-soft); font-size: 12px; }
+.loading { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 22px; color: var(--text-soft); font-size: 13px; }
+.empty { margin: 0; padding: 22px 20px; color: var(--text-faint); font-size: 13px; }
+
+.list { margin: 0; padding: 0; list-style: none; }
+.list li { display: grid; grid-template-columns: minmax(180px, 1.4fr) 110px minmax(180px, 1.6fr) auto; gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.list li:last-child { border-bottom: 0; }
+.list li.closed { opacity: .62; }
+.primary { display: grid; gap: 3px; min-width: 0; }
+.primary strong { color: var(--text); font-size: 13px; }
+.primary small { overflow: hidden; color: var(--text-faint); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.details { display: grid; gap: 3px; margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.45; }
+.details small { color: var(--text-faint); font-size: 11px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.danger { color: var(--red) !important; }
+
+.hint { margin: 0; color: var(--text-faint); font-size: 11px; line-height: 1.5; }
+.error { margin: 0 0 4px; padding: 9px 11px; color: var(--red); background: var(--red-soft); border-radius: 7px; font-size: 12px; }
+
+@media (max-width: 860px) {
+  .list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .details { grid-column: 1 / -1; }
+  .actions { grid-column: 1 / -1; justify-content: flex-start; }
+}

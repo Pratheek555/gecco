@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { prisma } from "db/client";
 import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
+import { notifyOwnersOfPayment } from "@/app/api/payment/notify-owners";
 
 export const runtime = "nodejs";
 
@@ -110,6 +111,13 @@ export async function POST(request: Request) {
 
       return createdPayment;
     });
+
+    // Owner emails go out after the response so a slow or failing mail provider never blocks recording.
+    after(() =>
+      notifyOwnersOfPayment(payment.id, request).catch((error) => {
+        console.error("Failed to notify owners of payment", error);
+      }),
+    );
 
     return NextResponse.json(payment, { status: 201 });
   } catch {

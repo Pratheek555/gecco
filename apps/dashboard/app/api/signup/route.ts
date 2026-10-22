@@ -3,15 +3,9 @@ import { prisma } from "db/client";
 import { normalizeEmail } from "@/app/api/auth/email";
 import { hashPassword, isValidPassword } from "@/app/api/auth/password";
 import { createSession, setSessionCookie } from "@/app/api/auth/session";
-
-function isValidTimezone(value: string) {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { pendingSignupInviteWhere } from "@/app/lib/signup-invites";
+import { hashInviteToken, TeamError } from "@/app/lib/team";
+import { isValidTimezone } from "@/app/lib/timezones";
 
 export const runtime = "nodejs";
 
@@ -21,6 +15,8 @@ type SignupInput = {
   password: string;
   gymName: string;
   timezone?: string;
+  /** Token from the single-use signup link the Gecco team issued. */
+  token: string;
 };
 
 export async function POST(request: Request) {
@@ -32,7 +28,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
-  const { email, fullName, password, gymName, timezone } = body;
+  const { email, fullName, password, gymName, timezone, token } = body;
+
+  if (typeof token !== "string" || !token) {
+    return NextResponse.json(
+      { error: "Gecco is invite-only. Contact the Gecco team to get your gym set up." },
+      { status: 403 },
+    );
+  }
 
   const normalizedEmail = normalizeEmail(email);
   if (
@@ -52,6 +55,17 @@ export async function POST(request: Request) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const invite = await tx.gymSignupInvite.findFirst({
+        where: { tokenHash: hashInviteToken(token), ...pendingSignupInviteWhere() },
+        select: { id: true, email: true, seatLimit: true },
+      });
+      if (!invite) {
+        throw new TeamError("This signup link has expired, was revoked, or was already used. Ask the Gecco team for a new one.", 410);
+      }
+      if (invite.email && invite.email !== normalizedEmail) {
+        throw new TeamError("This signup link was issued for a different email address.", 403);
+      }
+
       const user = await tx.user.create({
         data: {
           authSubject: `password:${crypto.randomUUID()}`,
@@ -65,6 +79,7 @@ export async function POST(request: Request) {
         data: {
           name: gymName.trim(),
           timezone: timezone?.trim() || "Asia/Kolkata",
+          seatLimit: invite.seatLimit,
         },
       });
 
@@ -91,6 +106,13 @@ export async function POST(request: Request) {
         },
       });
 
+      // Conditional claim so two people racing on the same link cannot both create a gym.
+      const claimed = await tx.gymSignupInvite.updateMany({
+        where: { id: invite.id, ...pendingSignupInviteWhere() },
+        data: { usedAt: new Date(), gymId: gym.id },
+      });
+      if (!claimed.count) throw new TeamError("This signup link was already used.", 410);
+
       return { userId: user.id, gymId: gym.id };
     }, {
       maxWait: 10_000,
@@ -102,6 +124,7 @@ export async function POST(request: Request) {
     setSessionCookie(response, await createSession(result.userId, result.gymId));
     return response;
   } catch (error) {
+    if (error instanceof TeamError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
     }

@@ -9,21 +9,23 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(uuid()) @db.Uuid
-  authSubject    String         @unique
-  fullName       String
-  email          String         @unique
-  createdAt      DateTime       @default(now()) @map("created_at")
-  passwordHash   String?        @map("password_hash")
-  gymUsers       GymUser[]
-  notes          MemberNote[]   @relation("NoteAuthor")
-  payments       Payment[]      @relation("PaymentRecorder")
-  sessions       Session[]
-  memberImports  MemberImport[]
-  leadActivities LeadActivity[] @relation("LeadActivityAuthor")
-  assignedLeads  Lead[]         @relation("LeadAssignee")
-  sentInvites    GymInvite[]    @relation("InviteSender")
-  acceptedInvites GymInvite[]   @relation("InviteAcceptor")
+  id              String               @id @default(uuid()) @db.Uuid
+  authSubject     String               @unique
+  fullName        String
+  email           String               @unique
+  createdAt       DateTime             @default(now()) @map("created_at")
+  passwordHash    String?              @map("password_hash")
+  gymUsers        GymUser[]
+  notes           MemberNote[]         @relation("NoteAuthor")
+  payments        Payment[]            @relation("PaymentRecorder")
+  sessions        Session[]
+  passwordResets  PasswordResetToken[]
+  memberImports   MemberImport[]
+  leadActivities  LeadActivity[]       @relation("LeadActivityAuthor")
+  assignedLeads   Lead[]               @relation("LeadAssignee")
+  sentInvites     GymInvite[]          @relation("InviteSender")
+  acceptedInvites GymInvite[]          @relation("InviteAcceptor")
+  signupInvites   GymSignupInvite[]    @relation("SignupInviteCreator")
 
   @@map("users")
 }
@@ -49,6 +51,7 @@ model Gym {
   memberImports  MemberImport[]
   leads          Lead[]
   invites        GymInvite[]
+  signupInvite   GymSignupInvite?
 
   @@map("gyms")
 }
@@ -68,6 +71,20 @@ model Session {
   @@map("sessions")
 }
 
+/// Single-use, short-lived link for setting a new password. Only the token's hash is stored.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_reset_tokens")
+}
+
 model GymUser {
   gymId       String      @map("gym_id") @db.Uuid
   userId      String      @map("user_id") @db.Uuid
@@ -76,9 +93,9 @@ model GymUser {
   permissions String[]    @default([])
   memberScope MemberScope @default(ALL) @map("member_scope")
   isActive    Boolean     @default(true)
-  createdAt DateTime    @default(now()) @map("created_at")
-  gym       Gym         @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  gym         Gym         @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([gymId, userId])
   @@map("gym_users")
@@ -106,6 +123,30 @@ model GymInvite {
 
   @@index([gymId, acceptedAt, revokedAt, expiresAt])
   @@map("gym_invites")
+}
+
+/// Single-use link the Gecco team issues so a new gym owner can create their workspace.
+/// Only the token's hash is stored.
+model GymSignupInvite {
+  id              String    @id @default(uuid()) @db.Uuid
+  tokenHash       String    @unique @map("token_hash")
+  /// Suggested gym name, editable by the owner during signup.
+  gymName         String?   @map("gym_name")
+  /// When set, only this email can use the link.
+  email           String?
+  seatLimit       Int       @default(5) @map("seat_limit")
+  note            String?
+  createdByUserId String    @map("created_by_user_id") @db.Uuid
+  expiresAt       DateTime  @map("expires_at")
+  usedAt          DateTime? @map("used_at")
+  revokedAt       DateTime? @map("revoked_at")
+  gymId           String?   @unique @map("gym_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       User      @relation("SignupInviteCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  gym             Gym?      @relation(fields: [gymId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("gym_signup_invites")
 }
 
 model Trainer {

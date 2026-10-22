@@ -18,6 +18,8 @@ export type CurrentSession = {
     memberScope: MemberScope;
   };
   gyms: Array<CurrentSession["activeGym"]>;
+  /** Gecco staff who can onboard new gyms. UI hint only; admin APIs check it server-side. */
+  isPlatformAdmin: boolean;
 };
 
 type SessionContextValue = {
