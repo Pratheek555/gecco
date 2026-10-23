@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  MessageCircle,
   ChevronDown,
   CircleHelp,
   CreditCard,
@@ -16,7 +15,6 @@ import {
   Users,
   WalletCards,
   X,
-  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { useSession, type CurrentSession } from "./session-provider";
@@ -34,7 +32,7 @@ const navigation: Array<{
       { label: "Leads", icon: Target, href: "/leads", permission: "leads:read" },
       // { label: "Attendance", icon: Activity, href: "/attendance" },
       { label: "Payments", icon: WalletCards, href: "/payments", permission: "payments:read" },
-      { label: "Messages", icon: MessageCircle, href: "/messages", permission: "members:read" },
+      // Messages is hidden until it is connected to live conversations.
     ],
   },
   {
@@ -44,7 +42,7 @@ const navigation: Array<{
       { label: "Trainers", icon: Dumbbell, href: "/trainers", permission: "trainers:read" },
       { label: "Team", icon: UserPlus, href: "/team", permission: "team:manage" },
       // { label: "Reports", icon: BarChart3, href: "/reports" },
-      { label: "Automations", icon: Zap, href: "/automations", permission: "gym:manage", badge: "NEW" },
+      // Automations is hidden until workflows are functional.
     ],
   },
 ];
