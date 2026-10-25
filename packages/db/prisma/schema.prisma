@@ -26,6 +26,8 @@ model User {
   sentInvites     GymInvite[]          @relation("InviteSender")
   acceptedInvites GymInvite[]          @relation("InviteAcceptor")
   signupInvites   GymSignupInvite[]    @relation("SignupInviteCreator")
+  campaigns       Campaign[]           @relation("CampaignCreator")
+  campaignSends   CampaignRecipient[]  @relation("CampaignSender")
 
   @@map("users")
 }
@@ -52,6 +54,7 @@ model Gym {
   leads          Lead[]
   invites        GymInvite[]
   signupInvite   GymSignupInvite?
+  campaigns      Campaign[]
 
   @@map("gyms")
 }
@@ -182,21 +185,24 @@ model TrainerIncentiveRule {
 }
 
 model Member {
-  id            String             @id @default(uuid()) @db.Uuid
-  gymId         String             @map("gym_id") @db.Uuid
-  memberNumber  String             @map("member_number")
-  fullName      String             @map("full_name")
-  joinedOn      DateTime           @default(now()) @map("joined_on") @db.Date
-  status        MemberRecordStatus @default(ACTIVE)
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
-  contacts      MemberContact[]
-  notes         MemberNote[]
-  gym           Gym                @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  charges       MembershipCharge[]
-  memberships   Membership[]
-  payments      Payment[]
-  convertedLead Lead?
+  id                 String              @id @default(uuid()) @db.Uuid
+  gymId              String              @map("gym_id") @db.Uuid
+  memberNumber       String              @map("member_number")
+  fullName           String              @map("full_name")
+  joinedOn           DateTime            @default(now()) @map("joined_on") @db.Date
+  status             MemberRecordStatus  @default(ACTIVE)
+  /// Set when the member asks not to receive campaign messages; campaigns skip them.
+  messagingOptOutAt  DateTime?           @map("messaging_opt_out_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  contacts           MemberContact[]
+  campaignRecipients CampaignRecipient[]
+  notes              MemberNote[]
+  gym                Gym                 @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  charges            MembershipCharge[]
+  memberships        Membership[]
+  payments           Payment[]
+  convertedLead      Lead?
 
   @@unique([gymId, memberNumber])
   @@index([gymId, fullName])
@@ -281,29 +287,32 @@ model MemberNote {
 }
 
 model Lead {
-  id                String          @id @default(uuid()) @db.Uuid
-  gymId             String          @map("gym_id") @db.Uuid
-  fullName          String          @map("full_name")
-  phone             String?
-  email             String?
-  source            LeadSource      @default(OTHER)
-  status            LeadStatus      @default(NEW)
-  interestedPlan    PlanType?       @map("interested_plan")
-  nextFollowUpAt    DateTime?       @map("next_follow_up_at")
-  lastContactedAt   DateTime?       @map("last_contacted_at")
-  lostReasonCode    LeadLostReason? @map("lost_reason_code")
-  lostReason        String?         @map("lost_reason")
-  assignedToUserId  String?         @map("assigned_to_user_id") @db.Uuid
-  trialAt           DateTime?       @map("trial_at")
-  firstContactedAt  DateTime?       @map("first_contacted_at")
-  convertedMemberId String?         @unique @map("converted_member_id") @db.Uuid
-  convertedAt       DateTime?       @map("converted_at")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
-  gym               Gym             @relation(fields: [gymId], references: [id], onDelete: Cascade)
-  convertedMember   Member?         @relation(fields: [convertedMemberId], references: [id], onDelete: SetNull)
-  assignedTo        User?           @relation("LeadAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  activities        LeadActivity[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  gymId              String              @map("gym_id") @db.Uuid
+  fullName           String              @map("full_name")
+  phone              String?
+  email              String?
+  source             LeadSource          @default(OTHER)
+  status             LeadStatus          @default(NEW)
+  interestedPlan     PlanType?           @map("interested_plan")
+  nextFollowUpAt     DateTime?           @map("next_follow_up_at")
+  lastContactedAt    DateTime?           @map("last_contacted_at")
+  lostReasonCode     LeadLostReason?     @map("lost_reason_code")
+  lostReason         String?             @map("lost_reason")
+  assignedToUserId   String?             @map("assigned_to_user_id") @db.Uuid
+  trialAt            DateTime?           @map("trial_at")
+  firstContactedAt   DateTime?           @map("first_contacted_at")
+  convertedMemberId  String?             @unique @map("converted_member_id") @db.Uuid
+  convertedAt        DateTime?           @map("converted_at")
+  /// Set when the lead asks not to receive campaign messages; campaigns skip them.
+  messagingOptOutAt  DateTime?           @map("messaging_opt_out_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  gym                Gym                 @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  convertedMember    Member?             @relation(fields: [convertedMemberId], references: [id], onDelete: SetNull)
+  assignedTo         User?               @relation("LeadAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  activities         LeadActivity[]
+  campaignRecipients CampaignRecipient[]
 
   @@index([gymId, status, updatedAt])
   @@index([gymId, nextFollowUpAt])
@@ -493,6 +502,60 @@ model MembershipBalanceTransfer {
   @@map("membership_balance_transfers")
 }
 
+/// A one-off message to a segment of members or leads. The audience is resolved
+/// and snapshotted into recipients when the campaign is created.
+model Campaign {
+  id              String              @id @default(uuid()) @db.Uuid
+  gymId           String              @map("gym_id") @db.Uuid
+  name            String
+  segment         CampaignSegment
+  /// Segment options at creation time, e.g. { "days": 7 }.
+  segmentParams   Json                @default("{}") @map("segment_params")
+  /// Message with {{variable}} placeholders; each recipient stores the rendered text.
+  messageTemplate String              @map("message_template")
+  channel         CampaignChannel     @default(WHATSAPP_ASSISTED)
+  status          CampaignStatus      @default(ACTIVE)
+  /// Payments, renewals, and conversions within this many days of a send are credited to the campaign.
+  attributionDays Int                 @default(7) @map("attribution_days")
+  createdByUserId String?             @map("created_by_user_id") @db.Uuid
+  completedAt     DateTime?           @map("completed_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  gym             Gym                 @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  createdBy       User?               @relation("CampaignCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  recipients      CampaignRecipient[]
+
+  @@index([gymId, createdAt])
+  @@map("campaigns")
+}
+
+model CampaignRecipient {
+  id           String                  @id @default(uuid()) @db.Uuid
+  campaignId   String                  @map("campaign_id") @db.Uuid
+  memberId     String?                 @map("member_id") @db.Uuid
+  leadId       String?                 @map("lead_id") @db.Uuid
+  fullName     String                  @map("full_name")
+  /// WhatsApp number as digits with country code, e.g. 919876543210.
+  phone        String
+  message      String
+  /// Values substituted into the template, kept for reference.
+  variables    Json                    @default("{}")
+  status       CampaignRecipientStatus @default(PENDING)
+  sentAt       DateTime?               @map("sent_at")
+  sentByUserId String?                 @map("sent_by_user_id") @db.Uuid
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+  campaign     Campaign                @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  member       Member?                 @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  lead         Lead?                   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  sentBy       User?                   @relation("CampaignSender", fields: [sentByUserId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, status])
+  @@index([memberId, sentAt])
+  @@index([leadId, sentAt])
+  @@map("campaign_recipients")
+}
+
 view MemberBalanceSummary {
   gymId            String    @map("gym_id") @db.Uuid
   memberId         String    @map("member_id") @db.Uuid
@@ -627,4 +690,30 @@ enum RecipientType {
   GYM
   TRAINER
   OTHER
+}
+
+enum CampaignSegment {
+  EXPIRING_SOON
+  EXPIRED_NOT_RENEWED
+  DUES_OUTSTANDING
+  PT_UPSELL
+  ACTIVE_MEMBERS
+  LOST_LEADS
+  TRIALS_NOT_CONVERTED
+}
+
+enum CampaignChannel {
+  WHATSAPP_ASSISTED
+}
+
+enum CampaignStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum CampaignRecipientStatus {
+  PENDING
+  SENT
+  SKIPPED
+  OPTED_OUT
 }

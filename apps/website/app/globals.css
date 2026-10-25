@@ -10,7 +10,8 @@ body {
 }
 
 body {
-  background: #ffffff;
+  background: #060509;
+  color-scheme: dark;
   font-family: var(--font-geist-sans), Arial, sans-serif;
 }
 
@@ -25,6 +26,6 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(22, 134, 248, 0.25);
+  outline: 3px solid rgba(143, 122, 246, 0.55);
   outline-offset: 2px;
 }

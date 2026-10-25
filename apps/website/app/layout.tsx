@@ -13,26 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gecco — Websites, SEO, Automations & Gym Management",
+  title: "Gecco — Run your gym: members, leads and payments in one place",
   description:
-    "Gecco helps fitness businesses grow with conversion-focused websites, SEO, smart automations and one connected management dashboard.",
+    "Gecco is the workspace for growing gyms. Reply to enquiries first, renew memberships before they lapse, and see exactly who still owes you.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable}`}
-    >
-      <body>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var q=new URLSearchParams(location.search).get('theme');var t=q||localStorage.getItem('gecco-theme');if(t){document.documentElement.dataset.theme=t}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.dataset.theme='dark'}}catch(e){}})();`,
-          }}
-        />
-        {children}
-      </body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

@@ -1,3 +1,4 @@
+import { GeccoMark } from "@/components/gecco-mark";
 import Link from "next/link";
 import styles from "../../signup/signup.module.css";
 import AcceptInvite from "./accept-invite";
@@ -14,7 +15,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
     <main className={styles.page}>
       <section className={styles.intro}>
         <Link className={styles.brand} href="/">
-          <span className={styles.brandMark}>↗</span>
+          <span className={styles.brandMark}><GeccoMark size={17} /></span>
           Gecco
         </Link>
         <div className={styles.introContent}>

@@ -1,4 +1,5 @@
-import { Activity, LockKeyhole, ShieldCheck } from "lucide-react";
+import { LockKeyhole, ShieldCheck } from "lucide-react";
+import { GeccoMark } from "@/components/gecco-mark";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./login.module.css";
@@ -9,7 +10,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <main className={styles.page}>
       <section className={styles.intro} aria-label="Gecco introduction">
         <Link className={styles.brand} href="/">
-          <span className={styles.brandMark}><Activity size={19} strokeWidth={2.8} /></span>
+          <span className={styles.brandMark}><GeccoMark size={18} /></span>
           Gecco
         </Link>
         <div className={styles.introCopy}>
@@ -27,7 +28,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
       <section className={styles.loginArea}>
         <Link className={styles.mobileBrand} href="/">
-          <span className={styles.brandMark}><Activity size={18} strokeWidth={2.8} /></span>
+          <span className={styles.brandMark}><GeccoMark size={17} /></span>
           Gecco
         </Link>
         <div className={styles.loginCard}>{children}</div>

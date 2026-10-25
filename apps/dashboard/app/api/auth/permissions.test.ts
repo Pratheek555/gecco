@@ -22,6 +22,7 @@ describe("Gecco permission policy", () => {
 
   it("adds the permissions a screen depends on", () => {
     assert.deepEqual(normalizeGrant(["payments:record"], "ALL"), ["members:read", "payments:read", "payments:record"]);
+    assert.deepEqual(normalizeGrant(["campaigns:send"], "ALL"), ["campaigns:read", "campaigns:send"]);
     assert.deepEqual(normalizeGrant(["memberships:write"], "ALL"), [
       "members:read",
       "memberships:read",
@@ -33,6 +34,7 @@ describe("Gecco permission policy", () => {
 
   it("drops gym-wide permissions for assigned-member access", () => {
     assert.deepEqual(normalizeGrant(["overview:read", "members:read"], "ASSIGNED"), ["members:read"]);
+    assert.deepEqual(normalizeGrant(["campaigns:send"], "ASSIGNED"), []);
   });
 
   it("gives trainers only their own members by default", () => {

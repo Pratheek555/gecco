@@ -1,0 +1,660 @@
+.section {
+  position: relative;
+  z-index: 4;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 120px 32px 140px;
+}
+
+.intro {
+  max-width: 640px;
+}
+
+.eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--violet-soft);
+}
+
+.intro h2 {
+  margin: 16px 0 0;
+  font-size: clamp(36px, 4.8vw, 60px);
+  font-weight: 650;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.intro h2 em {
+  font-style: normal;
+  background: linear-gradient(100deg, #e3dbff 0%, #a998ff 45%, #6f57e8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.intro p {
+  max-width: 540px;
+  margin: 20px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Bento */
+
+.bento {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  grid-template-rows: 300px 320px 320px;
+  grid-template-areas:
+    "revenue revenue leads"
+    "channels feature leads"
+    "channels chart chart";
+  gap: 14px;
+  margin-top: 56px;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  padding: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(138, 117, 246, 0.07), transparent 60%),
+    #0f0e15;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease), border-color 0.3s;
+}
+
+.tile:hover {
+  border-color: rgba(138, 117, 246, 0.28);
+}
+
+.section[data-seen="true"] .tile {
+  opacity: 1;
+  transform: none;
+}
+
+.revenue { grid-area: revenue; transition-delay: 0s; }
+.leads { grid-area: leads; transition-delay: 0.08s; }
+.channels { grid-area: channels; transition-delay: 0.16s; }
+.feature { grid-area: feature; transition-delay: 0.22s; }
+.chart { grid-area: chart; transition-delay: 0.3s; }
+
+.tile h3 {
+  margin: 10px 0 0;
+  font-size: 19px;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+}
+
+.tile p {
+  max-width: 420px;
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.tile footer {
+  margin-top: auto;
+}
+
+/* Collections meter */
+
+.meterHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.monthLabel {
+  display: block;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.bigNumber {
+  display: block;
+  margin-top: 4px;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  font-size: 17px;
+  font-style: normal;
+  font-weight: 600;
+  color: #4ade80;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter {
+  --p: 0.82;
+  position: relative;
+  display: flex;
+  gap: 5px;
+  height: 46px;
+  margin-top: 30px;
+}
+
+.meter i {
+  --on: clamp(0, calc(var(--p) * 44 - var(--i)), 1);
+  flex: 1;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #c9bcff, #8a75f6);
+  opacity: calc(0.16 + 0.84 * var(--on));
+}
+
+.prevMarker {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: calc(var(--prev, 0.7) * 100%);
+  width: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: left 0.6s var(--ease), background 0.3s;
+}
+
+.prevMarker span {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--faint);
+  transform: translateX(-50%);
+  transition: color 0.3s;
+}
+
+.meter[data-beaten="true"] .prevMarker {
+  background: #4ade80;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.8);
+}
+
+.meter[data-beaten="true"] .prevMarker span {
+  color: #4ade80;
+}
+
+.meterGlow {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--p) * 100%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.95), rgba(199, 185, 255, 0.55) 35%, rgba(138, 117, 246, 0) 100%);
+  mix-blend-mode: screen;
+  transform: translate(-60%, -50%);
+  pointer-events: none;
+}
+
+/* Lead stack */
+
+.leadStack {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 10px -8px 14px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 62%, transparent);
+}
+
+.leadStack ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+}
+
+.leadCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  animation: leadIn 0.7s var(--ease);
+}
+
+.leadCard:first-child {
+  border-color: rgba(138, 117, 246, 0.4);
+  background: rgba(138, 117, 246, 0.1);
+  box-shadow: 0 10px 30px -12px rgba(111, 87, 232, 0.6);
+}
+
+.leadAvatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 650;
+  color: var(--violet-soft);
+  background: rgba(138, 117, 246, 0.16);
+}
+
+.leadCard span {
+  display: grid;
+  min-width: 0;
+}
+
+.leadCard b {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.leadCard small {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.leadCard em {
+  margin-left: auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.4s, background 0.4s;
+}
+
+.leadCard em[data-tone="new"] { color: #93c5fd; background: rgba(96, 165, 250, 0.14); }
+.leadCard em[data-tone="replied"] { color: #6ee7b7; background: rgba(52, 211, 153, 0.12); }
+.leadCard em[data-tone="trial"] { color: #fcd34d; background: rgba(251, 191, 36, 0.12); }
+.leadCard em[data-tone="joined"] { color: #0b0912; background: #4ade80; }
+
+.joinedCount {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.joinedCount strong {
+  display: inline-block;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 650;
+  color: #4ade80;
+  animation: pop 0.5s var(--ease);
+}
+
+/* Channel chips */
+
+.chipField {
+  position: relative;
+  display: flex;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  margin: -26px -26px 18px;
+  padding: 0 26px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 70%, transparent);
+}
+
+.chipColumn {
+  flex: 1;
+  animation: driftUp 22s linear infinite;
+  animation-delay: var(--offset);
+}
+
+.chipColumn:last-child {
+  padding-top: 40px;
+  animation-duration: 26s;
+}
+
+.chipColumn ul {
+  display: grid;
+  justify-items: start;
+  gap: 26px;
+  margin: 0;
+  padding: 0 0 26px;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(23, 21, 32, 0.9);
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.8);
+}
+
+.chip:nth-child(even) {
+  margin-left: 28px;
+}
+
+.chip svg {
+  width: 15px;
+  height: 15px;
+  color: var(--tone);
+}
+
+/* Feature tile */
+
+.feature {
+  justify-content: space-between;
+  padding: 0;
+  border-color: rgba(138, 117, 246, 0.35);
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(199, 185, 255, 0.35), transparent 70%),
+    linear-gradient(170deg, #6f57e8 0%, #3a2a8f 55%, #1a1433 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 30px 80px -30px rgba(111, 87, 232, 0.8);
+}
+
+.featureNumber {
+  display: grid;
+  justify-items: center;
+  padding-top: 52px;
+  text-align: center;
+}
+
+.featureNumber strong {
+  font-size: 88px;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0.55));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.featureNumber span {
+  margin-top: 8px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.pillRows {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 26px;
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+}
+
+.pillTrack {
+  display: flex;
+  width: max-content;
+  animation: slideLeft 26s linear infinite;
+}
+
+.pillTrack[data-reverse="true"] {
+  animation-direction: reverse;
+  animation-duration: 30s;
+}
+
+.pillTrack ul {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0 10px 0 0;
+  list-style: none;
+}
+
+.pillTrack li {
+  padding: 7px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Members curve */
+
+.chartArea {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 10px 0 18px;
+}
+
+.chartArea svg {
+  position: absolute;
+  inset: 34px 0 0;
+  width: 100%;
+  height: calc(100% - 34px);
+  overflow: visible;
+}
+
+.chartLine,
+.chartComet,
+.chartCometCore {
+  fill: none;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chartLine {
+  stroke: #8a75f6;
+  stroke-width: 2;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 2s var(--ease) 0.4s;
+}
+
+.chartFill {
+  opacity: 0;
+  transition: opacity 1.4s ease 1.2s;
+}
+
+.section[data-seen="true"] .chartLine {
+  stroke-dashoffset: 0;
+}
+
+.section[data-seen="true"] .chartFill {
+  opacity: 1;
+}
+
+.chartComet,
+.chartCometCore {
+  stroke-dasharray: 9 100;
+  stroke-dashoffset: 9;
+  opacity: 0;
+}
+
+.chartComet {
+  stroke: #c9bcff;
+  stroke-width: 10;
+}
+
+.chartCometCore {
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+
+.section[data-seen="true"] .chartComet,
+.section[data-seen="true"] .chartCometCore {
+  animation: comet 3.6s cubic-bezier(0.45, 0, 0.55, 1) 2.2s infinite;
+}
+
+.marker {
+  position: absolute;
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--muted);
+  background: rgba(15, 14, 21, 0.92);
+  transform: translateX(-50%);
+}
+
+.marker b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.markerUp b {
+  color: #4ade80;
+}
+
+/* Anchor edge labels inward so they never clip at the tile edge. */
+.marker:not(.markerUp) {
+  transform: translateX(-18%);
+}
+
+.marker:not(.markerUp)::after {
+  left: 18%;
+}
+
+.markerUp {
+  transform: translateX(-82%);
+}
+
+.markerUp::after {
+  left: 82%;
+}
+
+/* Hairline dropping from the label to the curve. */
+.marker::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.35), transparent);
+}
+
+/* Loops rest while the section is off screen. */
+.section[data-paused="true"] .chipColumn,
+.section[data-paused="true"] .pillTrack,
+.section[data-paused="true"] .chartComet,
+.section[data-paused="true"] .chartCometCore {
+  animation-play-state: paused;
+}
+
+@keyframes leadIn {
+  from { opacity: 0; transform: translateY(-18px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes driftUp {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+
+@keyframes slideLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes comet {
+  0% { stroke-dashoffset: 9; opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { stroke-dashoffset: -100; opacity: 0; }
+}
+
+/* Responsive */
+
+@media (max-width: 1000px) {
+  .bento {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "revenue revenue"
+      "feature leads"
+      "channels leads"
+      "chart chart";
+  }
+
+  .revenue { min-height: 290px; }
+  .feature { min-height: 300px; }
+  .chart { min-height: 320px; }
+
+  /* The drifting chips would otherwise size the tile to their full loop. */
+  .chipField {
+    flex: none;
+    height: 240px;
+  }
+}
+
+@media (max-width: 680px) {
+  .section {
+    padding: 88px 20px 100px;
+  }
+
+  .bento {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "revenue"
+      "feature"
+      "leads"
+      "channels"
+      "chart";
+  }
+
+  .leads { min-height: 420px; }
+
+  .bigNumber { font-size: 28px; }
+  .featureNumber strong { font-size: 72px; }
+  .tile { padding: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .chartLine,
+  .chartFill {
+    transition: none;
+  }
+
+  .chipColumn,
+  .pillTrack,
+
+  .leadCard,
+  .joinedCount strong {
+    animation: none;
+  }
+
+  .chartComet,
+  .chartCometCore {
+    display: none;
+  }
+}

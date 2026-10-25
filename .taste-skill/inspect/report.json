@@ -1,0 +1,1621 @@
+{
+ "url": "http://localhost:3002",
+ "at": "2026-10-22T14:39:51.544Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.86,
+    0.88
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 1323,
+     "screens": 1.5,
+     "words": 408,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 14,
+     "sections": 5,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Overview",
+     "words": 1,
+     "chars": 8,
+     "lines": 1,
+     "size": 22,
+     "vw": 1.5,
+     "font": "IBM Plex Sans",
+     "weight": 600,
+     "tracking": -0.01,
+     "leading": 1.27,
+     "top": 73,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Overview",
+     "words": 1,
+     "lines": 1,
+     "size": 22,
+     "font": "IBM Plex Sans"
+    },
+    "headings": [
+     {
+      "text": "7/ 13 gyms",
+      "words": 3,
+      "chars": 10,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.21,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.23,
+      "top": 212,
+      "tag": "p",
+      "kind": "heading"
+     },
+     {
+      "text": "1,498",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.21,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.23,
+      "top": 212,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "₹52,80,900",
+      "words": 1,
+      "chars": 10,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.21,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.23,
+      "top": 332,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "4",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.21,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.23,
+      "top": 332,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 4,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 3,
+     "centered": 0,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      22,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans",
+      "size": 12,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 6.4
+     },
+     "measureChars": 117,
+     "max": {
+      "size": 28,
+      "vw": 1.9,
+      "font": "IBM Plex Sans",
+      "text": "7"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.01,
+     "smallText": 22
+    },
+    "eyebrows": [
+     {
+      "text": "Live this week",
+      "above": "7/ 13 gyms",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 14,
+      "top": 186
+     },
+     {
+      "text": "Active members",
+      "above": "1,498",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 14,
+      "top": 186
+     },
+     {
+      "text": "Payments recorded",
+      "above": "₹52,80,900",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 14,
+      "top": 306
+     },
+     {
+      "text": "New accounts",
+      "above": "4",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 14,
+      "top": 306
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#eff2f4",
+     "bodyBgHsl": {
+      "h": 204,
+      "s": 0.19,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ffffff",
+       "top": 48,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#5d5f60",
+       "share": 0.47
+      },
+      {
+       "color": "#131416",
+       "share": 0.37
+      },
+      {
+       "color": "#92400e",
+       "share": 0.09
+      },
+      {
+       "color": "#66696b",
+       "share": 0.07
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#131416"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 9,
+     "inHero": 8,
+     "radius": 6,
+     "height": 57,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Overview",
+      "New signup link",
+      "Muscle Mantra Owner working alone for 76",
+      "Anvil Barbell Club Nothing recorded for ",
+      "Hustle Hub No payment recorded for 12 da"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 22,
+     "hairlineSamples": [
+      "div.kpi 372px",
+      "div.kpi 372px",
+      "li.rung 704px",
+      "li.rung 704px",
+      "li.rung 704px"
+     ],
+     "outlinedBoxes": 8,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 8,
+     "boxRadius": 8,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": true,
+       "top": 169
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": true,
+     "height": 900,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex sans",
+     "ibm plex sans fallback"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 1323,
+    "margins": {
+     "left": 28,
+     "right": 50
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Overview",
+      "size": 22,
+      "top": 73,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 1023,
+      "n": 3
+     },
+     {
+      "x": 274,
+      "n": 2
+     },
+     {
+      "x": 253,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 6,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.06,
+    "voidBox": {
+     "x": 0,
+     "y": 420,
+     "w": 240,
+     "h": 300
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#eff2f4",
+    "sidebar": {
+     "w": 228,
+     "tag": "aside",
+     "links": 8,
+     "share": 0.16
+    },
+    "topbar": {
+     "h": 48
+    },
+    "canvas": {
+     "left": 25,
+     "right": 46
+    },
+    "hero": {
+     "text": "Overview",
+     "words": 1,
+     "chars": 8,
+     "lines": 1,
+     "size": 22,
+     "vw": 1.5,
+     "font": "IBM Plex Sans",
+     "weight": 600,
+     "tracking": -0.01,
+     "leading": 1.27,
+     "top": 73,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 2,
+    "layout": {
+     "panels": 2,
+     "firstScreen": 2,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 11,
+     "radii": [
+      [
+       8,
+       7
+      ],
+      [
+       0,
+       3
+      ],
+      [
+       16,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 4,
+     "tabularShare": 1,
+     "kpiMax": 28
+    },
+    "rows": null,
+    "chartHues": 1,
+    "placeholders": [],
+    "type": {
+     "under13": 0.41,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      22,
+      28
+     ]
+    },
+    "title": {
+     "text": "Overview",
+     "size": 22,
+     "top": 73
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 3,
+   "filled": [
+    0.94,
+    1,
+    0.99
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 2558,
+     "screens": 2.5,
+     "words": 399,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 14,
+     "sections": 5,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Overview",
+     "words": 1,
+     "chars": 8,
+     "lines": 1,
+     "size": 22,
+     "vw": 2.9,
+     "font": "IBM Plex Sans",
+     "weight": 600,
+     "tracking": -0.01,
+     "leading": 1.27,
+     "top": 69,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Overview",
+     "words": 1,
+     "lines": 1,
+     "size": 22,
+     "font": "IBM Plex Sans"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      22,
+      24
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans",
+      "size": 12,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 6.4
+     },
+     "measureChars": 116,
+     "max": {
+      "size": 24,
+      "vw": 3.1,
+      "font": "IBM Plex Sans",
+      "text": "7"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.01,
+     "smallText": 21
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#eff2f4",
+     "bodyBgHsl": {
+      "h": 204,
+      "s": 0.19,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#eff2f4",
+       "top": 0,
+       "hsl": {
+        "h": 204,
+        "s": 0.19,
+        "l": 0.95
+       }
+      },
+      {
+       "color": "#ffffff",
+       "top": 48,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#5d5f60",
+       "share": 0.47
+      },
+      {
+       "color": "#131416",
+       "share": 0.37
+      },
+      {
+       "color": "#92400e",
+       "share": 0.09
+      },
+      {
+       "color": "#66696b",
+       "share": 0.05
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#131416"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 9,
+     "inHero": 2,
+     "radius": 6,
+     "height": 57,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Overview",
+      "New signup link"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 23,
+     "hairlineSamples": [
+      "main.sheet 768px",
+      "div.kpi 367px",
+      "div.kpi 367px",
+      "li.rung 694px",
+      "li.rung 694px"
+     ],
+     "outlinedBoxes": 7,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 7,
+     "boxRadius": 8,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": true,
+     "height": 1024,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex sans",
+     "ibm plex sans fallback",
+     "__nextjs-geist"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 2558,
+    "margins": {
+     "left": 16,
+     "right": 33
+    },
+    "sections": [
+     {
+      "sel": "div.title-row",
+      "tag": "div",
+      "top": 69,
+      "height": 124,
+      "words": 25,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Overview",
+       "size": 22,
+       "tag": "h1"
+      },
+      "left": 16,
+      "right": 155,
+      "textLeft": 16,
+      "textRight": 155,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.stack",
+      "tag": "div",
+      "top": 213,
+      "height": 1180,
+      "words": 166,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "1,498",
+       "size": 24,
+       "tag": "p"
+      },
+      "left": 37,
+      "right": 37,
+      "textLeft": 37,
+      "textRight": 37,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "aside.stack.rail-columns",
+      "tag": "aside",
+      "top": 1417,
+      "height": 1121,
+      "words": 127,
+      "media": 0,
+      "middle": 207,
+      "heading": {
+       "text": "Needs attention",
+       "size": 16,
+       "tag": "h2"
+      },
+      "left": 16,
+      "right": 33,
+      "textLeft": 16,
+      "textRight": 33,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Overview",
+      "size": 22,
+      "top": 69,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 16,
+      "n": 4
+     },
+     {
+      "x": 37,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 6,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#eff2f4",
+    "sidebar": null,
+    "topbar": {
+     "h": 48
+    },
+    "canvas": {
+     "left": 16,
+     "right": 33
+    },
+    "hero": {
+     "text": "Overview",
+     "words": 1,
+     "chars": 8,
+     "lines": 1,
+     "size": 22,
+     "vw": 2.9,
+     "font": "IBM Plex Sans",
+     "weight": 600,
+     "tracking": -0.01,
+     "leading": 1.27,
+     "top": 69,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 2,
+    "layout": {
+     "panels": 7,
+     "firstScreen": 3,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 14,
+     "radii": [
+      [
+       8,
+       7
+      ],
+      [
+       0,
+       7
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 4,
+     "tabularShare": 1,
+     "kpiMax": 24
+    },
+    "rows": null,
+    "chartHues": 1,
+    "placeholders": [],
+    "type": {
+     "under13": 0.4,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      22,
+      24
+     ]
+    },
+    "title": {
+     "text": "Overview",
+     "size": 22,
+     "top": 69
+    },
+    "colourShare": 0.005
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 4,
+   "filled": [
+    0.94,
+    0.99,
+    1,
+    0.99
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 2772,
+     "screens": 3.3,
+     "words": 392,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 14,
+     "sections": 5,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Overview",
+     "words": 1,
+     "chars": 8,
+     "lines": 1,
+     "size": 22,
+     "vw": 5.6,
+     "font": "IBM Plex Sans",
+     "weight": 600,
+     "tracking": -0.01,
+     "leading": 1.27,
+     "top": 69,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Overview",
+     "words": 1,
+     "lines": 1,
+     "size": 22,
+     "font": "IBM Plex Sans"
+    },
+    "headings": [
+     {
+      "text": "Overview",
+      "words": 1,
+      "chars": 8,
+      "lines": 1,
+      "size": 22,
+      "vw": 5.6,
+      "font": "IBM Plex Sans",
+      "weight": 600,
+      "tracking": -0.01,
+      "leading": 1.27,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.92,
+      "top": 69,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "7 / 13 gyms",
+      "words": 4,
+      "chars": 11,
+      "lines": 2,
+      "size": 24,
+      "vw": 6.2,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 252,
+      "tag": "p",
+      "kind": "heading"
+     },
+     {
+      "text": "1,498",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.39,
+      "top": 252,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "₹52,80,900",
+      "words": 1,
+      "chars": 10,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.39,
+      "top": 391,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "4",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "IBM Plex Sans",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.39,
+      "top": 391,
+      "tag": "p",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 5,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 3,
+     "centered": 0,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "IBM Plex Sans",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      22,
+      24
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "IBM Plex Sans",
+      "size": 12,
+      "leading": 1.5,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 6.4
+     },
+     "measureChars": 53,
+     "max": {
+      "size": 24,
+      "vw": 6.2,
+      "font": "IBM Plex Sans",
+      "text": "7"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.01,
+     "smallText": 21
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#eff2f4",
+     "bodyBgHsl": {
+      "h": 204,
+      "s": 0.19,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#eff2f4",
+       "top": 0,
+       "hsl": {
+        "h": 204,
+        "s": 0.19,
+        "l": 0.95
+       }
+      },
+      {
+       "color": "#ffffff",
+       "top": 48,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#5d5f60",
+       "share": 0.47
+      },
+      {
+       "color": "#131416",
+       "share": 0.37
+      },
+      {
+       "color": "#92400e",
+       "share": 0.09
+      },
+      {
+       "color": "#66696b",
+       "share": 0.05
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#131416"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 9,
+     "inHero": 2,
+     "radius": 6,
+     "height": 57,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Overview",
+      "New signup link"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 21,
+     "hairlineSamples": [
+      "main.sheet 390px",
+      "li.rung 316px",
+      "li.rung 316px",
+      "li.rung 316px",
+      "li.rung 316px"
+     ],
+     "outlinedBoxes": 7,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 7,
+     "boxRadius": 8,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": true,
+     "height": 844,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "ibm plex sans",
+     "ibm plex sans fallback"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 2772,
+    "margins": {
+     "left": 16,
+     "right": 33
+    },
+    "sections": [
+     {
+      "sel": "div.title-row",
+      "tag": "div",
+      "top": 69,
+      "height": 124,
+      "words": 25,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Overview",
+       "size": 22,
+       "tag": "h1"
+      },
+      "left": 16,
+      "right": 47,
+      "textLeft": 16,
+      "textRight": 47,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.kpis",
+      "tag": "div",
+      "top": 213,
+      "height": 261,
+      "words": 47,
+      "media": 0,
+      "middle": 35,
+      "heading": {
+       "text": "1,498",
+       "size": 24,
+       "tag": "p"
+      },
+      "left": 29,
+      "right": 31,
+      "textLeft": 29,
+      "textRight": 31,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.panel",
+      "tag": "section",
+      "top": 498,
+      "height": 771,
+      "words": 103,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Activation ladder",
+       "size": 16,
+       "tag": "h2"
+      },
+      "left": 37,
+      "right": 61,
+      "textLeft": 37,
+      "textRight": 61,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.panel",
+      "tag": "section",
+      "top": 1293,
+      "height": 314,
+      "words": 16,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "Payments recorded per week, all gyms",
+       "size": 16,
+       "tag": "h2"
+      },
+      "left": 37,
+      "right": 37,
+      "textLeft": 37,
+      "textRight": 67,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "aside.stack.rail-columns",
+      "tag": "aside",
+      "top": 1631,
+      "height": 1121,
+      "words": 127,
+      "media": 0,
+      "middle": 18,
+      "heading": {
+       "text": "Needs attention",
+       "size": 16,
+       "tag": "h2"
+      },
+      "left": 16,
+      "right": 33,
+      "textLeft": 16,
+      "textRight": 33,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Overview",
+      "size": 22,
+      "top": 69,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 16,
+      "n": 4
+     },
+     {
+      "x": 37,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 6,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#eff2f4",
+    "sidebar": null,
+    "topbar": {
+     "h": 48
+    },
+    "canvas": {
+     "left": 16,
+     "right": 33
+    },
+    "hero": {
+     "text": "Overview",
+     "words": 1,
+     "chars": 8,
+     "lines": 1,
+     "size": 22,
+     "vw": 5.6,
+     "font": "IBM Plex Sans",
+     "weight": 600,
+     "tracking": -0.01,
+     "leading": 1.27,
+     "top": 69,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 2,
+    "layout": {
+     "panels": 7,
+     "firstScreen": 3,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 14,
+     "radii": [
+      [
+       8,
+       7
+      ],
+      [
+       0,
+       7
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 4,
+     "tabularShare": 1,
+     "kpiMax": 24
+    },
+    "rows": null,
+    "chartHues": 1,
+    "placeholders": [],
+    "type": {
+     "under13": 0.39,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      22,
+      24
+     ]
+    },
+    "title": {
+     "text": "Overview",
+     "size": 22,
+     "top": 69
+    },
+    "colourShare": 0.004
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\prath\\Desktop\\g\\gecco\\.taste-skill\\inspect\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\prath\\Desktop\\g\\gecco\\.taste-skill\\inspect\\desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\prath\\Desktop\\g\\gecco\\.taste-skill\\inspect\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\prath\\Desktop\\g\\gecco\\.taste-skill\\inspect\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\prath\\Desktop\\g\\gecco\\.taste-skill\\inspect\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\prath\\Desktop\\g\\gecco\\.taste-skill\\inspect\\mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

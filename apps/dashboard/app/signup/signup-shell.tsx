@@ -1,3 +1,4 @@
+import { GeccoMark } from "@/components/gecco-mark";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./signup.module.css";
@@ -8,7 +9,7 @@ export function SignupShell({ children }: { children: ReactNode }) {
     <main className={styles.page}>
       <section className={styles.intro}>
         <Link className={styles.brand} href="/">
-          <span className={styles.brandMark}>↗</span>
+          <span className={styles.brandMark}><GeccoMark size={17} /></span>
           Gecco
         </Link>
         <div className={styles.introContent}>

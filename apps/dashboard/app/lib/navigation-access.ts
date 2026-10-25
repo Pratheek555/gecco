@@ -8,6 +8,7 @@ export const pageAccess: ReadonlyArray<{ href: string; permission: Permission }>
   { href: "/payments", permission: "payments:read" },
   { href: "/memberships", permission: "memberships:read" },
   { href: "/trainers", permission: "trainers:read" },
+  { href: "/campaigns", permission: "campaigns:read" },
 ];
 
 export function firstAllowedPath(permissions: readonly Permission[]) {

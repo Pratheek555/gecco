@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import {
   CalendarDays,
   Check,
+  ChevronLeft,
   ChevronRight,
   Download,
   CreditCard,
@@ -25,7 +26,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardSidebar, { Brand } from "../dashboard-sidebar";
 import MobileNavigation from "../mobile-navigation";
 import ProfileMenu from "../profile-menu";
@@ -95,6 +96,25 @@ type MembersResponse = {
   error?: string;
 };
 
+type QuickFilter = "all" | "dues" | "expiring" | "none";
+
+type MembersPageResponse = MembersResponse & {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  stats: {
+    totalMembers: number;
+    activeMemberships: number;
+    outstanding: number;
+    overdueMembers: number;
+  };
+  filterCounts: Record<QuickFilter, number>;
+  trainerOptions: string[];
+};
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 type MemberDetailsResponse = {
   member: {
     contacts: {
@@ -141,6 +161,16 @@ function membershipDuration(durationMonths: number) {
 
 function formatTableDate(date: string) {
   return tableDate.format(new Date(`${date}T00:00:00.000Z`));
+}
+
+// Page numbers to render, with null marking a gap: 1 … 4 5 6 … 12
+function pageNumbers(page: number, totalPages: number) {
+  const pages = [...new Set([1, page - 1, page, page + 1, totalPages])]
+    .filter((value) => value >= 1 && value <= totalPages)
+    .sort((a, b) => a - b);
+  return pages.flatMap((value, index) =>
+    index > 0 && value - pages[index - 1] > 1 ? [null, value] : [value],
+  );
 }
 
 function assignedTrainers(member: Member) {
@@ -782,10 +812,15 @@ function EditMemberDialog({
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [directory, setDirectory] = useState<Omit<MembersPageResponse, "members"> | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [trainerFilter, setTrainerFilter] = useState("all");
-  const [quickFilter, setQuickFilter] = useState("all");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [sort, setSort] = useState("name");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [reloadKey, setReloadKey] = useState(0);
   const { session } = useSession();
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: session?.activeGym.timezone ?? "Asia/Kolkata",
@@ -795,17 +830,7 @@ export default function MembersPage() {
   }).format(new Date());
   const daysUntil = (date: string) =>
     Math.round((Date.parse(date + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 86400000);
-  const matchesQuickFilter = (member: Member, filter: string) => {
-    if (filter === "dues") return Number(member.balance.totalOutstanding) > 0;
-    if (filter === "expiring")
-      return member.memberships.some(
-        (plan) => daysUntil(plan.endsOn) >= 0 && daysUntil(plan.endsOn) <= 30,
-      );
-    if (filter === "none")
-      return !member.memberships.some((plan) => plan.startsOn <= today && plan.endsOn >= today);
-    return true;
-  };
-  const quickFilters = [
+  const quickFilters: { id: QuickFilter; label: string }[] = [
     { id: "all", label: "All members" },
     { id: "dues", label: "Outstanding dues" },
     { id: "expiring", label: "Expiring in 30 days" },
@@ -814,13 +839,17 @@ export default function MembersPage() {
   const hasFilters = Boolean(query || trainerFilter !== "all" || quickFilter !== "all");
   function resetFilters() {
     setQuery("");
+    setDebouncedQuery("");
     setTrainerFilter("all");
     setQuickFilter("all");
+    setPage(1);
   }
 
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState("");
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -851,105 +880,115 @@ export default function MembersPage() {
     notify("Member archived successfully");
   }
 
+  function directoryParams(overrides: Record<string, string> = {}) {
+    return new URLSearchParams({
+      q: debouncedQuery,
+      trainer: trainerFilter,
+      filter: quickFilter,
+      sort,
+      page: String(page),
+      pageSize: String(pageSize),
+      ...overrides,
+    });
+  }
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadMembers() {
-      try {
-        const response = await fetch("/api/members/allMembers");
-        const result = (await response.json()) as MembersResponse;
-
-        if (!response.ok) throw new Error(result.error ?? "We could not load members.");
-        if (!cancelled) {
-          setMembers(result.members);
-          const searchParams = new URLSearchParams(window.location.search);
-          if (searchParams.get("add") === "1") setIsAddMemberOpen(true);
-          const requestedMember = result.members.find(
-            (member) => member.id === searchParams.get("member"),
-          );
-          if (requestedMember) setActiveMember(requestedMember);
-        }
-      } catch (reason) {
-        if (!cancelled)
-          setError(reason instanceof Error ? reason.message : "We could not load members.");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+    // The requested member may not be on the first page, so load them on their own.
+    async function openDeepLink() {
+      const searchParams = new URLSearchParams(window.location.search);
+      const requestedMemberId = searchParams.get("member");
+      const result = requestedMemberId
+        ? ((await fetch(
+            `/api/members/allMembers?memberId=${encodeURIComponent(requestedMemberId)}`,
+          ).then((response) => response.json())) as MembersResponse)
+        : null;
+      if (cancelled) return;
+      if (searchParams.get("add") === "1") setIsAddMemberOpen(true);
+      if (result?.members?.[0]) setActiveMember(result.members[0]);
     }
 
-    void loadMembers();
+    void openDeepLink().catch(() => undefined);
     return () => {
       cancelled = true;
     };
   }, []);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadMembers() {
+      setIsFetching(true);
+      try {
+        const response = await fetch(`/api/members/allMembers?${directoryParams()}`, {
+          signal: controller.signal,
+        });
+        const result = (await response.json()) as MembersPageResponse;
+        if (!response.ok) throw new Error(result.error ?? "We could not load members.");
+        const { members: pageMembers, ...rest } = result;
+        setMembers(pageMembers);
+        setDirectory(rest);
+        setError("");
+        // The server clamps out-of-range pages, e.g. after archiving the last member on a page.
+        if (result.page !== page) setPage(result.page);
+      } catch (reason) {
+        if (controller.signal.aborted) return;
+        setError(reason instanceof Error ? reason.message : "We could not load members.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          setIsFetching(false);
+        }
+      }
+    }
+
+    void loadMembers();
+    return () => controller.abort();
+    // directoryParams reads exactly these values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, trainerFilter, quickFilter, sort, page, pageSize, reloadKey]);
+
   async function refreshMembers() {
-    const response = await fetch("/api/members/allMembers");
-    const result = (await response.json()) as MembersResponse;
-    if (!response.ok) throw new Error(result.error ?? "We could not load members.");
-    setMembers(result.members);
+    setReloadKey((key) => key + 1);
   }
 
-  const filteredMembers = (() => {
-    const search = query.trim().toLowerCase();
-    return members.filter((member) => {
-      const matchesSearch =
-        !search ||
-        `${member.fullName} ${member.memberNumber} ${member.memberships.map((membership) => `${membership.planTypeSnapshot} ${membership.planTypeSnapshot === "GT" ? "Group Gym Training" : "Personal Training"} ${membershipDuration(membership.durationMonths)}`).join(" ")}`
-          .toLowerCase()
-          .includes(search);
-      const trainers = member.memberships.flatMap((membership) => membership.trainers);
-      const matchesTrainer =
-        trainerFilter === "all" ||
-        (trainerFilter === "unassigned" && trainers.length === 0) ||
-        trainers.includes(trainerFilter);
-      return matchesSearch && matchesTrainer && matchesQuickFilter(member, quickFilter);
-    });
-  })().sort((a, b) => {
-    if (sort === "dues")
-      return (
-        Number(b.balance.totalOutstanding) - Number(a.balance.totalOutstanding) ||
-        a.fullName.localeCompare(b.fullName)
+  const total = directory?.total ?? 0;
+  const totalPages = directory?.totalPages ?? 1;
+  const firstShown = total ? (page - 1) * pageSize + 1 : 0;
+  const lastShown = Math.min(total, (page - 1) * pageSize + members.length);
+  const trainerOptions = directory?.trainerOptions ?? [];
+  const totals = {
+    totalMembers: directory?.stats.totalMembers ?? 0,
+    activeMemberships: directory?.stats.activeMemberships ?? 0,
+    outstanding: directory?.stats.outstanding ?? 0,
+    overdue: directory?.stats.overdueMembers ?? 0,
+  };
+
+  async function exportMembers() {
+    setIsExporting(true);
+    let filteredMembers: Member[];
+    try {
+      const response = await fetch(
+        `/api/members/allMembers?${directoryParams({ page: "1", pageSize: "all" })}`,
       );
-    if (sort === "expiry") {
-      const nextExpiry = (member: Member) =>
-        Math.min(
-          ...member.memberships
-            .filter((plan) => plan.endsOn >= today)
-            .map((plan) => Date.parse(plan.endsOn)),
-          Infinity,
-        );
-      const difference = nextExpiry(a) - nextExpiry(b);
-      if (difference && !Number.isNaN(difference)) return difference;
+      const result = (await response.json()) as MembersPageResponse;
+      if (!response.ok) throw new Error(result.error ?? "We could not export members.");
+      filteredMembers = result.members;
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : "We could not export members.");
+      return;
+    } finally {
+      setIsExporting(false);
     }
-    return a.fullName.localeCompare(b.fullName);
-  });
-
-  const trainerOptions = useMemo(
-    () =>
-      [
-        ...new Set(
-          members.flatMap((member) =>
-            member.memberships.flatMap((membership) => membership.trainers),
-          ),
-        ),
-      ].sort(),
-    [members],
-  );
-
-  const totals = useMemo(
-    () => ({
-      activeMemberships: members.reduce((total, member) => total + member.memberships.length, 0),
-      outstanding: members.reduce(
-        (total, member) => total + Number(member.balance.totalOutstanding),
-        0,
-      ),
-      overdue: members.filter((member) => Number(member.balance.overdueAmount) > 0).length,
-    }),
-    [members],
-  );
-
-  function exportMembers() {
     const csv = [
       "Client name,Active memberships,Start date,End date,Total amount,Paid amount,Dues,Trainer assigned",
       ...filteredMembers.map((member) =>
@@ -1006,10 +1045,10 @@ export default function MembersPage() {
               </button>
               <button
                 className="button secondary"
-                onClick={exportMembers}
-                disabled={isLoading || filteredMembers.length === 0}
+                onClick={() => void exportMembers()}
+                disabled={isLoading || isExporting || total === 0}
               >
-                <Download size={16} /> Export
+                <Download size={16} /> {isExporting ? "Exporting…" : "Export"}
               </button>
               <button className="button primary" onClick={() => setIsAddMemberOpen(true)}>
                 <Plus size={17} /> Add member
@@ -1025,7 +1064,7 @@ export default function MembersPage() {
               <div className="member-stat-copy">
                 <span>Total members</span>
                 <div>
-                  <strong>{members.length}</strong>
+                  <strong>{totals.totalMembers}</strong>
                 </div>
                 <small>In your active gym</small>
               </div>
@@ -1076,8 +1115,8 @@ export default function MembersPage() {
                   {isLoading
                     ? "Loading members…"
                     : hasFilters
-                      ? `${filteredMembers.length} matching members`
-                      : `${members.length} people in your community`}
+                      ? `${total} matching ${total === 1 ? "member" : "members"}`
+                      : `${totals.totalMembers} people in your community`}
                 </p>
               </div>
             </div>
@@ -1101,7 +1140,10 @@ export default function MembersPage() {
                 <select
                   aria-label="Filter members by trainer"
                   value={trainerFilter}
-                  onChange={(event) => setTrainerFilter(event.target.value)}
+                  onChange={(event) => {
+                    setTrainerFilter(event.target.value);
+                    setPage(1);
+                  }}
                 >
                   <option value="all">All trainers</option>
                   <option value="unassigned">Unassigned</option>
@@ -1115,7 +1157,10 @@ export default function MembersPage() {
                 <select
                   aria-label="Sort members"
                   value={sort}
-                  onChange={(event) => setSort(event.target.value)}
+                  onChange={(event) => {
+                    setSort(event.target.value);
+                    setPage(1);
+                  }}
                 >
                   <option value="name">Name A–Z</option>
                   <option value="dues">Highest outstanding</option>
@@ -1129,13 +1174,14 @@ export default function MembersPage() {
                   <button
                     key={filter.id}
                     aria-pressed={quickFilter === filter.id}
-                    onClick={() => setQuickFilter(filter.id)}
+                    onClick={() => {
+                      setQuickFilter(filter.id);
+                      setPage(1);
+                    }}
                   >
                     {filter.label}
                     <span>
-                      {isLoading
-                        ? "—"
-                        : members.filter((member) => matchesQuickFilter(member, filter.id)).length}
+                      {directory ? directory.filterCounts[filter.id] : "—"}
                     </span>
                   </button>
                 ))}
@@ -1146,7 +1192,10 @@ export default function MembersPage() {
                 </button>
               )}
             </div>
-            <div className="member-table-wrap roster-wrap">
+            <div
+              className={`member-table-wrap roster-wrap transition-opacity ${isFetching && !isLoading ? "opacity-60" : ""}`}
+              aria-busy={isFetching}
+            >
               <table className="member-table directory-table">
                 <thead>
                   <tr>
@@ -1185,7 +1234,7 @@ export default function MembersPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredMembers.map((member) => (
+                    members.map((member) => (
                       <tr key={member.id}>
                         <td data-label="Member">
                           <button
@@ -1284,7 +1333,7 @@ export default function MembersPage() {
                       </tr>
                     ))
                   )}
-                  {!filteredMembers.length && !isLoading && !error && (
+                  {!members.length && !isLoading && !error && (
                     <tr>
                       <td colSpan={5}>
                         <div className="member-empty">
@@ -1306,10 +1355,57 @@ export default function MembersPage() {
                 <span>
                   Showing{" "}
                   <strong>
-                    {filteredMembers.length ? 1 : 0}-{filteredMembers.length}
+                    {firstShown}–{lastShown}
                   </strong>{" "}
-                  of <strong>{members.length}</strong> members
+                  of <strong>{total}</strong> members
                 </span>
+                <div>
+                  <label>
+                    Rows per page
+                    <select
+                      aria-label="Members per page"
+                      value={pageSize}
+                      onChange={(event) => {
+                        setPageSize(Number(event.target.value));
+                        setPage(1);
+                      }}
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  {pageNumbers(page, totalPages).map((value, index) =>
+                    value === null ? (
+                      <span key={`gap-${index}`}>…</span>
+                    ) : (
+                      <button
+                        key={value}
+                        className={value === page ? "current" : undefined}
+                        aria-current={value === page ? "page" : undefined}
+                        onClick={() => setPage(value)}
+                      >
+                        {value}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalPages}
+                    aria-label="Next page"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
               </div>
             )}
           </section>

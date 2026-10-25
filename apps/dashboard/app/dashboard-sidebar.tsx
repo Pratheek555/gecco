@@ -9,15 +9,16 @@ import {
   Dumbbell,
   LayoutDashboard,
   LogOut,
-  TrendingUp,
+  Megaphone,
   Target,
   UserPlus,
   Users,
   WalletCards,
   X,
 } from "lucide-react";
+import { GeccoMark } from "@/components/gecco-mark";
 import { useState } from "react";
-import { useSession, type CurrentSession } from "./session-provider";
+import { getInitials, useSession, type CurrentSession } from "./session-provider";
 import type { Permission } from "./api/auth/permissions";
 
 const navigation: Array<{
@@ -32,6 +33,7 @@ const navigation: Array<{
       { label: "Leads", icon: Target, href: "/leads", permission: "leads:read" },
       // { label: "Attendance", icon: Activity, href: "/attendance" },
       { label: "Payments", icon: WalletCards, href: "/payments", permission: "payments:read" },
+      { label: "Campaigns", icon: Megaphone, href: "/campaigns", permission: "campaigns:read" },
       // Messages is hidden until it is connected to live conversations.
     ],
   },
@@ -51,7 +53,7 @@ function Brand() {
   return (
     <div className="brand">
       <div className="brand-mark">
-        <TrendingUp size={18} strokeWidth={2.8} />
+        <GeccoMark size={18} />
       </div>
       <span>Gecco</span>
     </div>
@@ -189,7 +191,7 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
                     onClick={onClose}
                     className={`nav-item ${active ? "active" : ""}`}
                   >
-                    <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+                    <Icon size={17} strokeWidth={active ? 2.1 : 1.8} />
                     <span>{label}</span>
                     {badge && (
                       <span className={`nav-badge ${badge === "NEW" ? "new" : ""}`}>{badge}</span>
@@ -212,13 +214,26 @@ export default function DashboardSidebar({ open, onClose, onNotify }: DashboardS
               )
             }
           >
-            <CircleHelp size={18} />
+            <CircleHelp size={17} strokeWidth={1.8} />
             <span>Help & support</span>
           </button>
-          <button className="nav-item" onClick={() => void signOut()}>
-            <LogOut size={18} />
-            <span>Sign out</span>
-          </button>
+          <div className="sidebar-account">
+            <span className="avatar avatar-main">
+              {session?.user.fullName ? getInitials(session.user.fullName) : "…"}
+            </span>
+            <span className="sidebar-account-copy">
+              <strong>{session?.user.fullName ?? "Loading…"}</strong>
+              <small>{session?.user.email ?? ""}</small>
+            </span>
+            <button
+              className="icon-button small"
+              onClick={() => void signOut()}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
         </div>
       </aside>
     </>

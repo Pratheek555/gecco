@@ -17,6 +17,8 @@ export const allPermissions = [
   "trainers:read",
   "trainers:manage",
   "trainer-incentives:manage",
+  "campaigns:read",
+  "campaigns:send",
   "gym:manage",
   "team:manage",
 ] as const;
@@ -44,13 +46,18 @@ export const impliedPermissions: Partial<Record<Permission, readonly Permission[
   "memberships:write": ["memberships:read", "trainers:read"],
   "memberships:cancel": ["memberships:read"],
   "trainers:manage": ["trainers:read"],
+  "campaigns:send": ["campaigns:read"],
 };
 
 /**
  * These permissions expose gym-wide data or create members outside anyone's
  * assignment, so they cannot be combined with an assigned-members scope.
  */
-export const fullScopePermissions: readonly Permission[] = ["overview:read"];
+export const fullScopePermissions: readonly Permission[] = [
+  "overview:read",
+  "campaigns:read",
+  "campaigns:send",
+];
 
 /** Access sections the owner toggles, in display order. */
 export const accessSections = [
@@ -95,6 +102,13 @@ export const accessSections = [
     description: "Trainer roster, clients, and revenue.",
     view: ["trainers:read"],
     edit: ["trainers:manage"],
+  },
+  {
+    key: "campaigns",
+    label: "Campaigns",
+    description: "Message segments of members and leads. Edit allows creating and sending.",
+    view: ["campaigns:read"],
+    edit: ["campaigns:send"],
   },
 ] as const satisfies ReadonlyArray<{
   key: string;
