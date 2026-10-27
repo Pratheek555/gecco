@@ -23,6 +23,7 @@ async function collected(gymId: string, gte: Date, lt: Date) {
 /**
  * Emails every active owner of the gym a celebratory receipt for a newly
  * recorded payment, with today's and this month's collection totals.
+ * Owners can turn this off in Settings.
  */
 export async function notifyOwnersOfPayment(paymentId: string, request: Request) {
   const payment = await prisma.payment.findUnique({
@@ -34,7 +35,7 @@ export async function notifyOwnersOfPayment(paymentId: string, request: Request)
       createdAt: true,
       gymId: true,
       memberId: true,
-      gym: { select: { name: true, timezone: true } },
+      gym: { select: { name: true, timezone: true, emailOwnersOnPayment: true } },
       member: { select: { fullName: true, memberNumber: true } },
       membership: { select: { plan: { select: { name: true } } } },
       paymentMode: { select: { name: true } },
@@ -42,7 +43,7 @@ export async function notifyOwnersOfPayment(paymentId: string, request: Request)
       recordedBy: { select: { fullName: true } },
     },
   });
-  if (!payment) return;
+  if (!payment || !payment.gym.emailOwnersOnPayment) return;
 
   const owners = await prisma.gymUser.findMany({
     where: { gymId: payment.gymId, role: "OWNER", isActive: true },

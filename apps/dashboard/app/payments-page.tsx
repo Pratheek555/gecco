@@ -301,7 +301,10 @@ type ChargeOption = {
   outstandingAmount: string;
   dueOn: string;
 };
-type PaymentContext = { memberships: { id: string; planName: string; charges: ChargeOption[] }[] };
+type PaymentContext = {
+  memberships: { id: string; planName: string; charges: ChargeOption[] }[];
+  receipt: { enabled: boolean; email: string | null };
+};
 
 function MemberPicker({
   members,
@@ -651,6 +654,18 @@ function RecordModal({
         <div className="secure-note">
           <ShieldCheck size={15} /> This payment will be added to the member ledger.
         </div>
+        {context?.receipt.enabled && (
+          <div className={`secure-note receipt-note${context.receipt.email ? "" : " muted"}`}>
+            <ReceiptText size={15} />
+            {context.receipt.email ? (
+              <span>
+                Receipt and PDF bill will be emailed to <strong>{context.receipt.email}</strong>
+              </span>
+            ) : (
+              <span>No email on file, so no receipt will be sent. You can download the bill afterwards.</span>
+            )}
+          </div>
+        )}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={close} disabled={submitting}>
             Cancel
@@ -1175,6 +1190,15 @@ export default function PaymentsPage() {
   const refreshPaymentData = useCallback(async () => {
     await Promise.all([loadPayments(), loadAnalytics()]);
   }, [loadAnalytics, loadPayments]);
+  async function emailBill(payment: PaymentRecord) {
+    try {
+      const response = await fetch(`/api/payment/${payment.id}/bill`, { method: "POST" });
+      const data = (await response.json()) as { sentTo?: string; error?: string };
+      notify(response.ok ? `Bill emailed to ${data.sentTo}` : (data.error ?? "Could not email the bill."));
+    } catch {
+      notify("Could not email the bill.");
+    }
+  }
   function applyDatePreset(preset: PaymentDatePreset) {
     setDatePreset(preset);
     setDateRange(dateRangeForPreset(preset));
@@ -1518,6 +1542,16 @@ export default function PaymentsPage() {
                               </span>
                             </td>
                             <td className="membership-actions">
+                              <a
+                                className="icon-button small"
+                                href={`/api/payment/${payment.id}/bill`}
+                                download
+                                title="Download bill (PDF)"
+                                aria-label={`Download bill for ${payment.member.fullName}`}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <Download size={16} />
+                              </a>
                               <button
                                 className="icon-button small"
                                 aria-label={`Actions for ${payment.member.fullName}`}
@@ -1532,6 +1566,30 @@ export default function PaymentsPage() {
                               </button>
                               {openPaymentMenu === payment.id && (
                                 <div className="membership-menu" role="menu">
+                                  <a
+                                    role="menuitem"
+                                    href={`/api/payment/${payment.id}/bill?inline=1`}
+                                    target="_blank"
+                                    rel="noopener"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setOpenPaymentMenu(null);
+                                    }}
+                                  >
+                                    View bill
+                                  </a>
+                                  {payment.status === "SUCCEEDED" && (
+                                    <button
+                                      role="menuitem"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setOpenPaymentMenu(null);
+                                        void emailBill(payment);
+                                      }}
+                                    >
+                                      Email bill to member
+                                    </button>
+                                  )}
                                   <button
                                     role="menuitem"
                                     onClick={(event) => {

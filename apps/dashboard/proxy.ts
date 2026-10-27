@@ -14,6 +14,7 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/invite/") ||
     pathname.startsWith("/signup/") ||
     pathname.startsWith("/reset-password/") ||
+    pathname.startsWith("/bills/") ||
     request.cookies.has("gecco_session")
   ) {
     return NextResponse.next();

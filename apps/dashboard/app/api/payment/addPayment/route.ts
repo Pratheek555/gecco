@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { prisma } from "db/client";
 import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
+import { emailMemberReceipt } from "@/app/api/payment/notify-member";
 import { notifyOwnersOfPayment } from "@/app/api/payment/notify-owners";
 
 export const runtime = "nodejs";
@@ -112,11 +113,16 @@ export async function POST(request: Request) {
       return createdPayment;
     });
 
-    // Owner emails go out after the response so a slow or failing mail provider never blocks recording.
+    // Emails go out after the response so a slow or failing mail provider never blocks recording.
     after(() =>
-      notifyOwnersOfPayment(payment.id, request).catch((error) => {
-        console.error("Failed to notify owners of payment", error);
-      }),
+      Promise.all([
+        notifyOwnersOfPayment(payment.id, request).catch((error) => {
+          console.error("Failed to notify owners of payment", error);
+        }),
+        emailMemberReceipt(payment.id, request, { automatic: true }).catch((error) => {
+          console.error("Failed to email member receipt", error);
+        }),
+      ]),
     );
 
     return NextResponse.json(payment, { status: 201 });

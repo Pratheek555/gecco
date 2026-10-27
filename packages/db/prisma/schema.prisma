@@ -33,28 +33,32 @@ model User {
 }
 
 model Gym {
-  id             String             @id @default(uuid()) @db.Uuid
-  name           String
-  timezone       String             @default("Asia/Kolkata")
+  id                   String             @id @default(uuid()) @db.Uuid
+  name                 String
+  timezone             String             @default("Asia/Kolkata")
   /// Maximum non-owner team accounts (active members + pending invites). Managed by Gecco, not by owners.
-  seatLimit      Int                @default(5) @map("seat_limit")
-  isActive       Boolean            @default(true)
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  users          GymUser[]
-  members        Member[]
-  charges        MembershipCharge[]
-  paymentModes   PaymentMode[]
-  recipients     PaymentRecipient[]
-  payments       Payment[]
-  plans          Plan[]
-  activeSessions Session[]          @relation("SessionActiveGym")
-  trainers       Trainer[]
-  memberImports  MemberImport[]
-  leads          Lead[]
-  invites        GymInvite[]
-  signupInvite   GymSignupInvite?
-  campaigns      Campaign[]
+  seatLimit            Int                @default(5) @map("seat_limit")
+  /// Email every owner a receipt and the day's collection whenever a payment is recorded.
+  emailOwnersOnPayment Boolean            @default(true) @map("email_owners_on_payment")
+  /// Email the member their receipt (with the PDF bill attached) when a payment is recorded.
+  emailMemberReceipts  Boolean            @default(true) @map("email_member_receipts")
+  isActive             Boolean            @default(true)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  users                GymUser[]
+  members              Member[]
+  charges              MembershipCharge[]
+  paymentModes         PaymentMode[]
+  recipients           PaymentRecipient[]
+  payments             Payment[]
+  plans                Plan[]
+  activeSessions       Session[]          @relation("SessionActiveGym")
+  trainers             Trainer[]
+  memberImports        MemberImport[]
+  leads                Lead[]
+  invites              GymInvite[]
+  signupInvite         GymSignupInvite?
+  campaigns            Campaign[]
 
   @@map("gyms")
 }
@@ -193,6 +197,8 @@ model Member {
   status             MemberRecordStatus  @default(ACTIVE)
   /// Set when the member asks not to receive campaign messages; campaigns skip them.
   messagingOptOutAt  DateTime?           @map("messaging_opt_out_at")
+  /// Unguessable key for the member's private bills page, shared in receipt emails.
+  billsToken         String              @unique @default(dbgenerated("(replace((gen_random_uuid())::text, '-'::text, ''::text) || replace((gen_random_uuid())::text, '-'::text, ''::text))")) @map("bills_token")
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
   contacts           MemberContact[]

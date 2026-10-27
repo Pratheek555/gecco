@@ -1,8 +1,14 @@
+type Attachment = {
+  filename: string;
+  content: Uint8Array;
+};
+
 type Email = {
   to: string;
   subject: string;
   text: string;
   html: string;
+  attachments?: Attachment[];
 };
 
 /**
@@ -16,7 +22,8 @@ export async function sendEmail(email: Email) {
     if (process.env.NODE_ENV === "production") {
       throw new Error("RESEND_API_KEY is not configured.");
     }
-    console.info(`[mailer] Email to ${email.to}: ${email.subject}\n${email.text}`);
+    const attached = email.attachments?.map((file) => `${file.filename} (${file.content.byteLength} bytes)`).join(", ");
+    console.info(`[mailer] Email to ${email.to}: ${email.subject}${attached ? ` [attached: ${attached}]` : ""}\n${email.text}`);
     return;
   }
 
@@ -32,6 +39,10 @@ export async function sendEmail(email: Email) {
       subject: email.subject,
       text: email.text,
       html: email.html,
+      attachments: email.attachments?.map((file) => ({
+        filename: file.filename,
+        content: Buffer.from(file.content).toString("base64"),
+      })),
     }),
   });
 

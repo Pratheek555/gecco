@@ -13,3 +13,16 @@
 .fields input:focus, .fields select:focus { border-color: var(--brand); outline: 0; }
 .hint { margin: 0; padding: 9px 11px; color: var(--text-soft); background: var(--surface-soft); border-radius: 7px; font-size: 12px; line-height: 1.5; }
 .error { margin: 0; padding: 9px 11px; color: var(--red); background: var(--red-soft); border-radius: 7px; font-size: 12px; }
+
+.stack { display: grid; gap: 16px; max-width: 640px; }
+.toggles { margin: 0; padding: 4px 20px; list-style: none; }
+.toggles li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px 0; }
+.toggles li + li { border-top: 1px solid var(--border); }
+.toggles strong { display: block; color: var(--text); font-size: 13px; font-weight: 650; }
+.toggles p { margin: 3px 0 0; color: var(--text-soft); font-size: 12px; line-height: 1.5; }
+.toggles :global(.toggle) { flex: none; cursor: pointer; }
+.toggles :global(.toggle):disabled { cursor: progress; opacity: .7; }
+.toggles :global(.toggle):focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.toggleIcon { display: grid; place-items: center; width: 32px; height: 32px; color: var(--brand); background: var(--brand-soft); border-radius: 8px; }
+.cardError { margin: 0 20px 14px; }
+.card > footer.note { justify-content: flex-start; color: var(--text-faint); font-size: 12px; }

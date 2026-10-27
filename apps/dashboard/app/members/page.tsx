@@ -9,7 +9,9 @@ import {
   ChevronRight,
   Download,
   CreditCard,
+  ExternalLink,
   Filter,
+  Link2,
   Mail,
   Menu,
   Moon,
@@ -139,6 +141,7 @@ type MemberDetailsResponse = {
     paymentMode: { name: string };
     recipient: { displayName: string };
   }[];
+  billsUrl: string;
   error?: string;
 };
 
@@ -353,6 +356,17 @@ function MemberDetailSections({ memberId }: { memberId: string }) {
   const [error, setError] = useState("");
   const [remark, setRemark] = useState("");
   const [isSavingRemark, setIsSavingRemark] = useState(false);
+  const [billsLinkCopied, setBillsLinkCopied] = useState(false);
+
+  async function copyBillsLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setBillsLinkCopied(true);
+      window.setTimeout(() => setBillsLinkCopied(false), 2000);
+    } catch {
+      window.prompt("Copy this bills link", url);
+    }
+  }
 
   async function editRemark(note: MemberDetailsResponse["member"]["notes"][number]) {
     const body = window.prompt("Edit remark", note.body)?.trim();
@@ -490,12 +504,35 @@ function MemberDetailSections({ memberId }: { memberId: string }) {
         </dl>
       </section>
       <section className="drawer-section">
-        <h3>Recent payments</h3>
+        <div className="drawer-section-head">
+          <h3>Payments &amp; bills</h3>
+          <div className="bills-link-actions">
+            <button
+              type="button"
+              className="bills-link-button"
+              onClick={() => void copyBillsLink(details.billsUrl)}
+              title="A private page where this member can download all their bills"
+            >
+              {billsLinkCopied ? <Check size={12} /> : <Link2 size={12} />}
+              {billsLinkCopied ? "Copied" : "Copy bills link"}
+            </button>
+            <a
+              className="bills-link-button icon-only"
+              href={details.billsUrl}
+              target="_blank"
+              rel="noopener"
+              aria-label="Open member bills page"
+              title="Open member bills page"
+            >
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
         {details.payments.length ? (
-          <div className="timeline">
+          <div className="timeline bills-timeline">
             {details.payments.map((payment) => (
               <div key={payment.id}>
-                <i className="green" />
+                <i className={payment.status === "SUCCEEDED" ? "green" : "red"} />
                 <span>
                   <strong>
                     <CreditCard size={12} /> {money.format(Number(payment.amount))} ·{" "}
@@ -507,6 +544,15 @@ function MemberDetailSections({ memberId }: { memberId: string }) {
                     {payment.status.toLowerCase()}
                   </small>
                 </span>
+                <a
+                  className="icon-button small"
+                  href={`/api/payment/${payment.id}/bill`}
+                  download
+                  title="Download bill (PDF)"
+                  aria-label={`Download bill for ${money.format(Number(payment.amount))} paid ${new Date(payment.paidOn).toLocaleDateString("en-IN")}`}
+                >
+                  <Download size={14} />
+                </a>
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
 import { type AuthorizedSession, memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
+import { memberBillsUrl } from "@/app/lib/bills-server";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ async function getScopedMember(memberId: string, session: AuthorizedSession) {
   });
 }
 
-export async function GET(_request: Request, context: RouteContext<"/api/members/[memberid]">) {
+export async function GET(request: Request, context: RouteContext<"/api/members/[memberid]">) {
   const auth = await requirePermission("members:read");
   if (!auth.ok) return auth.response;
   const { session } = auth;
@@ -42,6 +43,7 @@ export async function GET(_request: Request, context: RouteContext<"/api/members
     select: {
       id: true,
       fullName: true,
+      billsToken: true,
       contacts: {
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         select: { id: true, kind: true, value: true, isPrimary: true },
@@ -101,8 +103,10 @@ export async function GET(_request: Request, context: RouteContext<"/api/members
     }),
   ]);
 
+  const { billsToken, ...memberDetails } = member;
   return NextResponse.json({
-    member,
+    member: memberDetails,
+    billsUrl: memberBillsUrl(billsToken, request),
     payments,
     balance: balance ?? {
       totalOutstanding: "0",

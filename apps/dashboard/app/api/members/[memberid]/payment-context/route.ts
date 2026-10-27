@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "db/client";
 import { memberAccessWhere, requirePermission } from "@/app/api/auth/authorization";
+import { receiptContactSelect, receiptEmailAddress } from "@/app/api/payment/notify-member";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,8 @@ export async function GET(_request: Request, context: RouteContext<"/api/members
     select: {
       id: true,
       fullName: true,
+      contacts: receiptContactSelect,
+      gym: { select: { emailMemberReceipts: true } },
       memberships: {
         where: { status: "ACTIVE" },
         orderBy: { startsOn: "desc" },
@@ -43,6 +46,7 @@ export async function GET(_request: Request, context: RouteContext<"/api/members
 
   return NextResponse.json({
     member: { id: member.id, fullName: member.fullName },
+    receipt: { enabled: member.gym.emailMemberReceipts, email: receiptEmailAddress(member.contacts) },
     memberships: member.memberships.map((membership) => ({
       id: membership.id,
       planName: membership.plan.name,

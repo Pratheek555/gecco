@@ -1,3 +1,5 @@
+import { billNumber } from "@/app/lib/bills";
+
 export type PaymentReceivedDetails = {
   paymentId: string;
   gymName: string;
@@ -24,21 +26,21 @@ export type PaymentReceivedDetails = {
   paymentsUrl: string;
 };
 
-const FONT = "'Inter','Helvetica Neue',Helvetica,Arial,sans-serif";
-const PAGE = "#1d3b8b";
-const PAPER = "#fcfcf4";
-const INK = "#111111";
-const SOFT = "#5c5c57";
+export const FONT = "'Inter','Helvetica Neue',Helvetica,Arial,sans-serif";
+export const PAGE = "#1d3b8b";
+export const PAPER = "#fcfcf4";
+export const INK = "#111111";
+export const SOFT = "#5c5c57";
 
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const inrWhole = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
 /** Drops the paise when the amount is whole, so ₹12,000 never reads as ₹12,000.00. */
-function money(value: number) {
+export function money(value: number) {
   return Number.isInteger(value) ? inrWhole.format(value) : inr.format(value);
 }
 
-function escapeHtml(value: string) {
+export function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 }
 
@@ -46,7 +48,7 @@ function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
-function initials(name: string) {
+export function initials(name: string) {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
 }
@@ -66,16 +68,16 @@ function monthMomentum(monthTotal: number, lastMonthTotal: number) {
 }
 
 /** Half-circle bites along the paper edge, like a torn-off till roll. */
-function scallops(edge: "top" | "bottom") {
+export function scallops(edge: "top" | "bottom", background = PAGE) {
   const radius = edge === "top" ? "0 0 9px 9px" : "9px 9px 0 0";
-  const notch = `<td width="18" style="padding:0;"><div style="width:18px;height:9px;background:${PAGE};border-radius:${radius};font-size:0;line-height:0;">&nbsp;</div></td>`;
+  const notch = `<td width="18" style="padding:0;"><div style="width:18px;height:9px;background:${background};border-radius:${radius};font-size:0;line-height:0;">&nbsp;</div></td>`;
   const gap = `<td width="6" style="padding:0;font-size:0;line-height:0;">&nbsp;</td>`;
   const cells = Array.from({ length: 17 }, () => notch).join(gap);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${gap}${cells}${gap}</tr></table>`;
 }
 
 /** A decorative barcode whose bars are derived from the payment id, so each receipt gets its own. */
-function barcode(seed: string) {
+export function barcode(seed: string) {
   const source = seed.replace(/[^0-9a-z]/gi, "").toLowerCase() || "gecco";
   const units: [number, boolean][] = [[2, true], [1, false], [2, true], [2, false]];
   for (let i = 0; i < 60; i++) {
@@ -93,10 +95,10 @@ function barcode(seed: string) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed;"><tr>${bars.join("")}</tr></table>`;
 }
 
-const dashed = (gap = 22) =>
+export const dashed = (gap = 22) =>
   `<tr><td style="padding:${gap}px 0;"><div style="border-top:2px dashed #2a2a2a;font-size:0;line-height:0;">&nbsp;</div></td></tr>`;
 
-function infoRow(label: string, value: string) {
+export function infoRow(label: string, value: string) {
   return `<tr>
     <td style="padding:5px 0;font:400 13px/1.4 ${FONT};color:${SOFT};">${label}</td>
     <td align="right" style="padding:5px 0;font:500 13px/1.4 ${FONT};color:${INK};">${value}</td>
@@ -114,7 +116,7 @@ export function paymentReceivedEmail(details: PaymentReceivedDetails) {
   const e = escapeHtml;
   const amount = money(details.amount);
   const memberFirstName = details.memberName.trim().split(/\s+/)[0] || details.memberName;
-  const receiptNumber = details.paymentId.replace(/-/g, "").slice(0, 8).toUpperCase();
+  const receiptNumber = billNumber(details.paymentId);
   const paidOn = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(details.paidOn);
   const recordedAt = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: details.timezone })
     .format(details.recordedAt)
